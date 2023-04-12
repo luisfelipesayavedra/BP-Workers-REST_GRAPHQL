@@ -1,36 +1,2081 @@
-generator client {
-    provider = "prisma-client-js"
-    output   = "../generated/client"
-}
+//recordar desarrollar en orden de jerarquias empezando por las tablas que no tienen dependencias de otras
 
 datasource db {
-    provider = "sqlite"
-    url      = "file:./db.db"
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE")
 }
 
-model Usuario {
-    id         Int      @id @default(autoincrement())
-    first_name String
-    last_name  String
-    phone      String
-    email      String
-    password   String
-    imagen     String
-    createdAt  DateTime @default(now())
-    updatedAt  DateTime @updatedAt
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../generated/client"
+  previewFeatures = ["fullTextSearch", "fullTextIndex", "interactiveTransactions"]
+  binaryTargets   = ["debian-openssl-1.1.x", "darwin", "darwin-arm64", "windows", "debian-openssl-1.0.x", "debian-openssl-3.0.x"]
 }
 
-model Bulkings {
-    id            Int             @id @default(autoincrement())
-    percentage    Float
-    createdAt     DateTime        @default(now())
-    updatedAt     DateTime        @updatedAt
-    BulkingsError BulkingsError[]
+//TODO: add the rest of the generators, see product relations, check relation between stock and point of sale
+
+//SBQ internal user section
+model InternalUser {
+  uuid                          String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  first_name                    String
+  last_name                     String
+  gender                        GENDER                      @default(MALE)
+  type_DNI                      TYPE_DNI                    @default(CC)
+  DNI                           String?
+  position                      String?
+  email                         String                      @unique
+  account_status                ACCOUNT_STATUS              @default(CREATED)
+  profile_img                   String?
+  organization                  Organization?               @relation(fields: [organizationUuid], references: [uuid])
+  organizationUuid              String?                     @db.Uuid
+  user_role                     UserRole                    @relation(fields: [user_role_uuid], references: [uuid])
+  user_role_uuid                String                      @db.Uuid
+  birthday                      DateTime?
+  instagram                     String?
+  internal_user_password        InternalUserPassword[]
+  createdAt                     DateTime                    @default(now())
+  updatedAt                     DateTime                    @updatedAt
+  internal_user_cellphone       InternalUserCellphone[]
+  internal_user_address         InternalUserAddress[]
+  warehouse_manager             WarehouseManager[]
+  warehouse_grocer              WarehouseGrocer[]
+  pos_manager                   PosManager[]
+  user_has_permission           UserHasPermission[]
+  internal_user_google_provider InternalUserGoogleProvider?
+  first_login_provider          LOGIN_PROVIDER              @default(GOOGLE)
+  Customers                     Customer[]
+  Suppliers                     Supplier[]
+  SellerPos                     SellerPos[]
+  SellerSell                    SellerSell[]
+  BuyerPurchase                 BuyerPurchase[]
+  Metas                         Metas[]
+  UserCashbox                   UserCashbox[]
+  configInvoice                 ConfigInvoice[]
+  InvoiceDesign                 InvoiceDesign[]
+  Remisiones                    Remisiones[]
+
+  @@map("SBQ_internal_user")
 }
 
-model BulkingsError {
-    id          Int      @id @default(autoincrement())
-    error       String
-    BuilkingsId Int
-    bulking     Bulkings @relation(fields: [BuilkingsId], references: [id])
+model InternalUserGoogleProvider {
+  uuid               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  google_id          String       @unique
+  internal_user_uuid String       @unique @db.Uuid
+  internal_user      InternalUser @relation(fields: [internal_user_uuid], references: [uuid])
+  organizationUuid   String?
+
+  @@map("SBQ_internal_user_google_provider")
+}
+
+model InternalUserCellphone {
+  uuid               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  internal_user      InternalUser @relation(fields: [internal_user_uuid], references: [uuid])
+  internal_user_uuid String       @db.Uuid
+  cellphone_number   String
+  organizationUuid   String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@map("SBQ_internal_user_cellphone")
+}
+
+model InternalUserAddress {
+  uuid               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  internal_user      InternalUser @relation(fields: [internal_user_uuid], references: [uuid])
+  internal_user_uuid String       @db.Uuid
+  address            String
+  country            String?
+  state              String?
+  city               String?
+  latitude           Float?
+  longitude          Float?
+  organizationUuid   String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@map("SBQ_internal_user_address")
+}
+
+model InternalUserPassword {
+  uuid             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user             InternalUser @relation(fields: [user_uuid], references: [uuid])
+  user_uuid        String       @db.Uuid
+  password         String
+  organizationUuid String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@map("SBQ_internal_user_password")
+}
+
+//tabla de tipo seeder: se deben de crear todos los posibles tipos antes de crear los usuarios
+model UserRole {
+  uuid             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String         @unique
+  type             ROLE           @unique
+  organizationUuid String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  user             InternalUser[]
+
+  @@map("SBQ_user_role")
+}
+
+model UserHasPermission {
+  uuid               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  internal_user      InternalUser @relation(fields: [internal_user_uuid], references: [uuid])
+  internal_user_uuid String       @db.Uuid
+  permission         Permission   @relation(fields: [permission_uuid], references: [uuid])
+  permission_uuid    String       @db.Uuid
+  organizationUuid   String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@map("SBQ_user_has_permission")
+}
+
+model Permission {
+  uuid                     String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                     String              @unique
+  description              String
+  type                     PERMISSION
+  user_role_has_permission UserHasPermission[]
+  organizationUuid         String?
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
+
+  @@map("SBQ_permission")
+}
+
+//SBQ warehouse section
+model WarehouseManager {
+  uuid               String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  internal_user      InternalUser            @relation(fields: [internal_user_uuid], references: [uuid])
+  internal_user_uuid String                  @db.Uuid
+  warehouse          Warehouse               @relation(fields: [warehouse_uuid], references: [uuid])
+  warehouse_uuid     String                  @db.Uuid
+  status             MANAGER_INCHARGE_STATUS @default(CURRENT)
+  organizationUuid   String?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+
+  @@unique([internal_user_uuid, warehouse_uuid])
+  @@map("SBQ_warehouse_manager")
+}
+
+model WarehouseGrocer {
+  uuid               String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  internal_user      InternalUser           @relation(fields: [internal_user_uuid], references: [uuid])
+  internal_user_uuid String                 @db.Uuid
+  warehouse          Warehouse              @relation(fields: [warehouse_uuid], references: [uuid])
+  warehouse_uuid     String                 @db.Uuid
+  status             GROCER_INCHARGE_STATUS @default(CURRENT)
+  organizationUuid   String?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  @@unique([internal_user_uuid, warehouse_uuid])
+  @@map("SBQ_warehouse_grocer")
+}
+
+model Warehouse {
+  uuid               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String             @unique
+  description        String
+  warehouse_manager  WarehouseManager[]
+  warehouse_grocer   WarehouseGrocer[]
+  location_latitude  Float
+  location_longitude Float
+  location_address   String
+  city               String?
+  state              String?
+  country            String?
+  phone              String?
+  status             WAREHOUSE_STATUS   @default(AVAILABLE)
+  organizationUuid   String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  product_warehouse  ProductWarehouse[]
+  subproductSell     SubproductSell[]
+  WarehousePos       WarehousePos[]
+  UpcomingPurchase   UpcomingPurchase[]
+
+  @@map("SBQ_warehouse")
+}
+
+model WarehousePos {
+  uuid             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  warehouse        Warehouse @relation(fields: [warehouse_uuid], references: [uuid])
+  warehouse_uuid   String    @db.Uuid
+  pos              Pos       @relation(fields: [pos_uuid], references: [uuid])
+  pos_uuid         String    @db.Uuid
+  organizationUuid String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([warehouse_uuid, pos_uuid])
+  @@map("SBQ_warehouse_pos")
+}
+
+//SBQ POS section
+//TODO: asignar status a los pos
+model Pos {
+  uuid               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String
+  description        String
+  phone              String?
+  country            String?
+  state              String?
+  city               String?
+  address            String?
+  url                String?
+  CMS                String?
+  typeLocation       TYPE_LOCATION  @default(FISICA)
+  location_latitude  Float
+  location_longitude Float
+  location_address   String
+  status             POS_STATUS     @default(AVAILABLE)
+  organizationUuid   String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  pos_manager        PosManager[]
+  pos_cashbox        PosCashbox[]
+  CustomerPos        CustomerPos[]
+  SellerPos          SellerPos[]
+  WarehousePos       WarehousePos[]
+  wordpress          Wordpress[]
+
+  @@map("SBQ_pos")
+}
+
+model PosManager {
+  uuid               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  internal_user      InternalUser @relation(fields: [internal_user_uuid], references: [uuid])
+  internal_user_uuid String       @db.Uuid
+  pos                Pos          @relation(fields: [pos_uuid], references: [uuid])
+  pos_uuid           String       @unique @db.Uuid
+  organizationUuid   String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@map("SBQ_pos_manager")
+}
+
+model Cashbox {
+  uuid                 String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                 String                 @default("NOT ASIGNED")
+  initial_amount       Float
+  currency             CURRENCIES             @default(COP)
+  status               CASHBOX_STATUS         @default(AVAILABLE)
+  amount               Float                  @default(0.0)
+  pos_cashbox          PosCashbox[]
+  bank_account_cashbox BankAccountCashbox[]
+  organizationUuid     String?
+  configInvoice        ConfigInvoice[]
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  CashboxSell          CashboxSell[]
+  PaymentMethodCashbox PaymentMethodCashbox[]
+  CurrencyCashbox      CurrencyCashbox[]
+  UserCashbox          UserCashbox[]
+  TaxesCashbox         TaxesCashbox[]
+  SellBaseInvoice      SellBaseInvoice[]
+
+  @@map("SBQ_cashbox")
+}
+
+model UserCashbox {
+  uuid               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  internal_user      InternalUser @relation(fields: [internal_user_uuid], references: [uuid])
+  internal_user_uuid String       @db.Uuid
+  cashbox            Cashbox      @relation(fields: [cashbox_uuid], references: [uuid])
+  cashbox_uuid       String       @db.Uuid
+  organizationUuid   String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@unique([internal_user_uuid, cashbox_uuid])
+  @@map("SBQ_user_cashbox")
+}
+
+model PaymentMethodCashbox {
+  uuid                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cashbox             Cashbox       @relation(fields: [cashbox_uuid], references: [uuid])
+  cashbox_uuid        String        @db.Uuid
+  payment_method      PaymentMethod @relation(fields: [payment_method_uuid], references: [uuid])
+  payment_method_uuid String        @db.Uuid
+  organizationUuid    String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  @@unique([cashbox_uuid, payment_method_uuid])
+  @@map("SBQ_payment_method_cashbox")
+}
+
+model PaymentMethod {
+  uuid                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                   String                 @unique
+  description            String
+  organizationUuid       String?
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  payment_method_cashbox PaymentMethodCashbox[]
+
+  @@map("SBQ_payment_method")
+}
+
+model Currency {
+  uuid          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String?
+  symbol        String?
+  country       String?
+  currency_type CURRENCIES @unique @default(COP)
+}
+
+model CurrencyCashbox {
+  uuid             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cashbox          Cashbox        @relation(fields: [cashbox_uuid], references: [uuid])
+  cashbox_uuid     String         @db.Uuid
+  currency_uuid    CURRENCIES
+  Status           CURRENCYSTATUS @default(ACTIVE)
+  organizationUuid String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([cashbox_uuid, currency_uuid])
+}
+
+model PosCashbox {
+  uuid             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pos              Pos      @relation(fields: [pos_uuid], references: [uuid])
+  pos_uuid         String   @db.Uuid
+  cashbox          Cashbox  @relation(fields: [cashbox_uuid], references: [uuid])
+  cashbox_uuid     String   @db.Uuid
+  organizationUuid String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("SBQ_pos_cashbox")
+}
+
+model BankAccountCashbox {
+  uuid              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bank_account      BankAccount @relation(fields: [bank_account_uuid], references: [uuid])
+  bank_account_uuid String      @db.Uuid
+  cashbox           Cashbox     @relation(fields: [cashbox_uuid], references: [uuid])
+  cashbox_uuid      String      @db.Uuid
+  organizationUuid  String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@unique([bank_account_uuid, cashbox_uuid])
+  @@map("SBQ_bank_account_cashbox")
+}
+
+model SellerPos {
+  uuid               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  internal_user      InternalUser @relation(fields: [internal_user_uuid], references: [uuid])
+  internal_user_uuid String       @db.Uuid
+  pos                Pos          @relation(fields: [pos_uuid], references: [uuid])
+  pos_uuid           String       @db.Uuid
+  status             STATUS       @default(ACTIVE)
+  organizationUuid   String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@map("SBQ_seller_pos")
+}
+
+model ProductWarehouse {
+  uuid             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  warehouse        Warehouse   @relation(fields: [warehouse_uuid], references: [uuid])
+  warehouse_uuid   String      @db.Uuid
+  status           STATUS      @default(ACTIVE)
+  SubProduct       SubProduct? @relation(fields: [subProductUuid], references: [uuid])
+  subProductUuid   String?     @db.Uuid
+  product          Product?    @relation(fields: [product_uuid], references: [uuid])
+  product_uuid     String?     @db.Uuid
+  currentStock     Float       @default(0.0)
+  initialStock     Float       @default(0.0)
+  organizationUuid String?
+  createdAt        DateTime    @default(now())
+
+  @@unique([warehouse_uuid, subProductUuid, product_uuid])
+  @@map("SBQ_product_warehouse")
+}
+
+//SBQ product section
+model Product {
+  uuid                String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                String
+  description         String
+  wordpress_url       String?              @default("")
+  status              PRODUCT_STATUS?      @default(AVAILABLE)
+  productType         PRODUCT_TYPE         @default(FIXED)
+  byBuyOrSell         BYBUYORSELL?         @default(BUYANDSELL)
+  principalImage      String?
+  SKU                 String?
+  price               Int?
+  minimalPrice        Int?
+  wordpress_id        String?              @default("")
+  height              Float?               @default(0.0)
+  length              Float?               @default(0.0)
+  width               Float?               @default(0.0)
+  weight              Float?               @default(0.0)
+  product_warehouse   ProductWarehouse[]
+  productSupplier     ProductSupplier[]
+  subproduct          SubProduct[]
+  categories_products CategoriesProducts[]
+  BrandProduct        BrandProduct[]
+  organizationUuid    String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  ProductGallery      ProductGallery[]
+  justBuyable         Boolean              @default(false)
+  sells               SubproductSell[]
+  SubproductPurchase  SubproductPurchase[]
+  NoteCreditProducts  NoteCreditProducts[]
+  NoteDebitProducts   NoteDebitProducts[]
+  Remisiones          Remisiones[]
+
+  @@map("SBQ_product")
+}
+
+model ProductSupplier {
+  uuid             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product          Product?    @relation(fields: [product_uuid], references: [uuid])
+  product_uuid     String?     @db.Uuid
+  supplier         Supplier    @relation(fields: [supplier_uuid], references: [uuid])
+  supplier_uuid    String      @db.Uuid
+  organizationUuid String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  SubProduct       SubProduct? @relation(fields: [subProductUuid], references: [uuid])
+  subProductUuid   String?     @db.Uuid
+
+  @@map("SBQ_product_supplier")
+}
+
+model ProductGallery {
+  uuid             String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product          Product @relation(fields: [product_uuid], references: [uuid])
+  product_uuid     String  @db.Uuid
+  image            String
+  organizationUuid String?
+
+  @@map("SBQ_product_gallery")
+}
+
+model SubProduct {
+  uuid                   String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  price                  Int
+  buyPrice               Int                     @default(0)
+  minimalPrice           Int
+  status                 PRODUCT_STATUS?         @default(AVAILABLE)
+  SKU                    String
+  wordpress_url          String?                 @default("")
+  image                  String?
+  wordpress_id           String?                 @default("")
+  height                 Float?                  @default(0.0)
+  length                 Float?                  @default(0.0)
+  width                  Float?                  @default(0.0)
+  weight                 Float?                  @default(0.0)
+  product                Product                 @relation(fields: [product_uuid], references: [uuid])
+  product_uuid           String                  @db.Uuid
+  organizationUuid       String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  categories_subproducts CategoriesSubProducts[]
+  SubproductSell         SubproductSell[]
+  product_warehouse      ProductWarehouse[]
+  productSupplier        ProductSupplier[]
+  OptionsSubproduct      OptionsSubproduct?
+  SubproductPurchase     SubproductPurchase[]
+  NoteCreditProducts     NoteCreditProducts[]
+  NoteDebitProducts      NoteDebitProducts[]
+  Remisiones             Remisiones[]
+
+  @@map("SBQ_subproduct")
+}
+
+model OptionsSubproduct {
+  uuid             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  subproduct       SubProduct @relation(fields: [subproductUuid], references: [uuid])
+  organizationUuid String?
+  subproductUuid   String     @unique @db.Uuid
+  color            String?
+  size             String?
+  type             String?
+}
+
+model CategoriesSubProducts {
+  uuid             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  subproduct       SubProduct @relation(fields: [subproductUuid], references: [uuid])
+  subproductUuid   String     @db.Uuid
+  categoryUuid     String     @db.Uuid
+  category         Categories @relation(fields: [categoryUuid], references: [uuid])
+  organizationUuid String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  @@unique([subproductUuid, categoryUuid])
+  @@map("SBQ_categories_subproducts")
+}
+
+model CategoriesProducts {
+  uuid             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product          Product    @relation(fields: [productUuid], references: [uuid])
+  productUuid      String     @db.Uuid
+  categoryUuid     String     @db.Uuid
+  status           STATUS     @default(ACTIVE)
+  category         Categories @relation(fields: [categoryUuid], references: [uuid])
+  organizationUuid String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  @@unique([productUuid, categoryUuid])
+  @@map("SBQ_categories_products")
+}
+
+model Categories {
+  uuid                   String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                   String                  @unique
+  organizationUuid       String?
+  categoryPatern         Categories?             @relation("CategoriesToCategories", fields: [categoryPaternUuid], references: [uuid])
+  categoryPaternUuid     String?                 @db.Uuid
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  categorieImg           String?
+  CategoriesSubProducts  CategoriesSubProducts[]
+  categories_products    CategoriesProducts[]
+  CategoriesOrganization CategoriesOrganization?
+  CategoriesSupplier     CategoriesSupplier[]
+  Categories             Categories[]            @relation("CategoriesToCategories")
+
+  @@map("SBQ_categories")
+}
+
+model CategoriesOrganization {
+  uuid             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  categoryUuid     String       @unique @db.Uuid
+  category         Categories   @relation(fields: [categoryUuid], references: [uuid])
+  organizationUuid String       @db.Uuid
+  organization     Organization @relation(fields: [organizationUuid], references: [uuid])
+
+  @@map("SBQ_category_organizaiton")
+}
+
+//SBQ organization section
+model Organization {
+  uuid                      String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                      String
+  NIT                       String
+  description               String?
+  address2                  String?
+  creationDate              DateTime?                   @map("creation_date")
+  companyEmail              String?                     @map("creation_email")
+  companyPhone              String?                     @map("creation_phone")
+  country                   String?
+  state                     String?
+  city                      String?
+  logo                      String?
+  baseNumberEmployees       String?
+  address                   String?
+  latitude                  Float?
+  longitude                 Float?
+  fromattedAdress           String?
+  lat                       Int?
+  lng                       Int?
+  web                       String?
+  InternalUsers             InternalUser[]
+  supplierOrganization      SupplierOrganization[]
+  bank_account_organization BankAccountOrganization[]
+  CategoriesOrganization    CategoriesOrganization[]
+  OrganizationDocumentation OrganizationDocumentation[]
+  BrandOrganization         BrandOrganization[]
+  Wordpress                 Wordpress[]
+  organizationUuid          String?
+  createdAt                 DateTime                    @default(now())
+  updatedAt                 DateTime                    @updatedAt //TODO: agregar logo
+  OrganizationCurrencies    OrganizationCurrencies?
+  Labels                    Labels[]
+  Taxes                     Taxes[]
+  OrganizationAxcesDetails  OrganizationAxcesDetails[]
+  LogHistory                LogHistory[]
+  InvoiceLabel              InvoiceLabel?
+  ActivitiesOrganization    ActivitiesOrganization[]
+  Activity                  Activity[]
+  BulkinEvents              BulkinEvents[]
+  ConfigInvoice             ConfigInvoice[]
+  InvoiceDesign             InvoiceDesign[]
+
+  @@map("SBQ_organization")
+}
+
+model ActivitiesOrganization {
+  uuid             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationUuid String       @db.Uuid
+  organization     Organization @relation(fields: [organizationUuid], references: [uuid])
+  activityUuid     String       @db.Uuid
+  activity         Activities   @relation(fields: [activityUuid], references: [uuid])
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@map("SBQ_activities_organization")
+}
+
+model Activity {
+  uuid             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String
+  code             String
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  organization     Organization @relation(fields: [organizationUuid], references: [uuid])
+  organizationUuid String       @db.Uuid
+}
+
+model Activities {
+  uuid                   String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                   String
+  code                   String
+  organizationUuid       String?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  ActivitiesOrganization ActivitiesOrganization[]
+}
+
+model OrganizationDocumentation {
+  uuid              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  camara            String
+  cedulaFront       String       @map("cedula_front")
+  cedulaBack        String       @map("cedula_back")
+  bankCertification String       @map("back_certification")
+  organizationUuid  String       @unique @map("organization_uuid") @db.Uuid
+  organization      Organization @relation(fields: [organizationUuid], references: [uuid])
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@map("SBQ_organization_documentation")
+}
+
+model Taxes {
+  uuid              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String
+  description       String
+  country           String?
+  state             String?
+  city              String?
+  taxesCode         String?
+  forNatural        Boolean           @default(false)
+  forJuridica       Boolean           @default(false)
+  typeLocation      TAX_TYPE_LOCATION
+  forSells          Boolean           @default(false)
+  forBought         Boolean           @default(false)
+  typeTax           TAX_TYPE
+  period            TAX_PERIOD
+  percent           Float
+  ACTIVE            Boolean           @default(true)
+  status            STATUS            @default(ACTIVE)
+  organization      Organization      @relation(fields: [organization_uuid], references: [uuid])
+  organization_uuid String            @db.Uuid
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  TaxesCashbox      TaxesCashbox[]
+  SellTaxes         SellTaxes[]
+
+  @@map("SBQ_taxes")
+}
+
+model TaxesCashbox {
+  uuid             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cashboxUuid      String   @db.Uuid
+  cashbox          Cashbox  @relation(fields: [cashboxUuid], references: [uuid])
+  taxUuid          String   @db.Uuid
+  tax              Taxes    @relation(fields: [taxUuid], references: [uuid])
+  organizationUuid String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([cashboxUuid, taxUuid])
+  @@map("SBQ_taxes_cashbox")
+}
+
+model OrganizationAxcesDetails {
+  uuid              String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organization      Organization              @relation(fields: [organization_uuid], references: [uuid])
+  organization_uuid String                    @db.Uuid
+  invoiceRangeStart Int
+  invoiceRageEnd    Int
+  ExpiredIn         DateTime
+  totalLeft         Int
+  Status            DIAN_AXCES_DETAILS_STATUS
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+}
+
+model OrganizationCurrencies {
+  uuid             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationUuid String       @unique @map("organization_uuid") @db.Uuid
+  organization     Organization @relation(fields: [organizationUuid], references: [uuid])
+  currencie        CURRENCIES
+}
+
+model Labels {
+  uuid                 String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  principalImg         String
+  principalImgOrg      String?                 @default("")
+  organizationUuid     String?                 @db.Uuid
+  LabelDeliveryDetails LabelsDeliveryDetails[]
+  LabelStorageDetails  LabelsStorageDetails[]
+  LabelsStyles         LabelsStyles[]
+  LabelsItems          LabelsItems[]
+  organization         Organization?           @relation(fields: [organizationUuid], references: [uuid])
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+
+  @@map("SBQ_labels")
+}
+
+model LabelsItems {
+  uuid      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id        String?  @default("")
+  name      String?  @default("")
+  value     String?  @default("")
+  className String?  @default("")
+  type      String?  @default("")
+  labelUuid String   @db.Uuid
+  label     Labels   @relation(fields: [labelUuid], references: [uuid])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("SBQ_labels_items")
+}
+
+model LabelsOrgInfo {
+  uuid                      String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type                      String
+  position                  Int
+  organizationUuid          String?
+  createdAt                 DateTime               @default(now())
+  updatedAt                 DateTime               @updatedAt
+  LabelsDeliveryDetails     LabelsDeliveryDetails? @relation(fields: [labelsDeliveryDetailsUuid], references: [uuid])
+  labelsDeliveryDetailsUuid String?                @db.Uuid
+  LabelsStorageDetails      LabelsStorageDetails?  @relation(fields: [labelsStorageDetailsUuid], references: [uuid])
+  labelsStorageDetailsUuid  String?                @db.Uuid
+
+  @@map("SBQ_labels_organization_info")
+}
+
+model LabelsProdInfo {
+  uuid                      String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type                      String
+  position                  Int
+  organizationUuid          String?
+  createdAt                 DateTime               @default(now())
+  updatedAt                 DateTime               @updatedAt
+  LabelsDeliveryDetails     LabelsDeliveryDetails? @relation(fields: [labelsDeliveryDetailsUuid], references: [uuid])
+  labelsDeliveryDetailsUuid String?                @db.Uuid
+  LabelsStorageDetails      LabelsStorageDetails?  @relation(fields: [labelsStorageDetailsUuid], references: [uuid])
+  labelsStorageDetailsUuid  String?                @db.Uuid
+
+  @@map("SBQ_labels_product_info")
+}
+
+model LabelsDeliveryDetails {
+  uuid             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type             String
+  position         Int
+  LabelsProdInfo   LabelsProdInfo[]
+  LabelsOrgInfo    LabelsOrgInfo[]
+  Labels           Labels?          @relation(fields: [labelsUuid], references: [uuid])
+  labelsUuid       String?          @db.Uuid
+  organizationUuid String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@map("SBQ_labels_delivery_info")
+}
+
+model LabelsStorageDetails {
+  uuid             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type             String
+  position         Int
+  LabelsProdInfo   LabelsProdInfo[]
+  LabelsOrgInfo    LabelsOrgInfo[]
+  Labels           Labels?          @relation(fields: [labelsUuid], references: [uuid])
+  labelsUuid       String?          @db.Uuid
+  organizationUuid String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@map("SBQ_labels_storage_info")
+}
+
+model LabelsStyles {
+  uuid             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  includeFrames    Boolean? @default(false)
+  Labels           Labels?  @relation(fields: [labelsUuid], references: [uuid])
+  labelsUuid       String?  @db.Uuid
+  type             String?  @default("")
+  organizationUuid String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("SBQ_labels_styles")
+}
+
+model InvoiceLabel {
+  uuid              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationUuid  String              @unique @map("organization_uuid") @db.Uuid
+  organization      Organization        @relation(fields: [organizationUuid], references: [uuid])
+  InvoiceLabelItems InvoiceLabelItems[]
+}
+
+model InvoiceLabelItems {
+  uuid             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id               String?      @default("")
+  name             String?      @default("")
+  value            String?      @default("")
+  className        String?      @default("")
+  type             String?      @default("")
+  invoiceLabelUuid String       @map("invoice_label_uuid") @db.Uuid
+  invoiceLabel     InvoiceLabel @relation(fields: [invoiceLabelUuid], references: [uuid])
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@map("SBQ_invoice_labels_items")
+}
+
+model BankAccountOrganization {
+  uuid              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bank_account      BankAccount  @relation(fields: [bank_account_uuid], references: [uuid])
+  bank_account_uuid String       @unique @db.Uuid
+  organization      Organization @relation(fields: [organization_uuid], references: [uuid])
+  organization_uuid String       @db.Uuid
+  organizationUuid  String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@map("SBQ_bank_account_organization")
+}
+
+model BankAccount {
+  uuid                      String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                      String?
+  description               String?
+  bank_name                 String
+  bank_account              String                    @unique
+  bank_account_type         BANK_ACCOUNT_TYPE         @default(SAVINGS)
+  bank_account_owner_name   String?
+  bank_account_document     String?
+  type_document             TYPE_ACCOUNT_DNI          @default(NIT)
+  status                    STATUS_BANK_ACCOUNT       @default(ACTIVE)
+  organizationUuid          String?
+  createdAt                 DateTime                  @default(now())
+  updatedAt                 DateTime                  @updatedAt
+  bank_account_cashbox      BankAccountCashbox[]
+  bank_account_organization BankAccountOrganization[]
+  amount                    Float                     @default(0)
+
+  @@map("SBQ_bank_account")
+}
+
+//THIS is the customer section with relations
+model Customer {
+  uuid                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firstName             String
+  LastName              String
+  email                 String
+  wordpress_url         String?           @default("")
+  wordpress_id          String?           @default("")
+  sendEmail             Boolean           @default(false)
+  DNI                   String
+  TypeDOC               TYPE_DNI          @default(CC)
+  birthDate             DateTime?
+  CustomerDetails       CustomerDetails?
+  profileImg            String?
+  status                CUSTOMER_STATUS   @default(ACTIVE)
+  NIT                   String?
+  DV                    String?
+  name                  String?
+  habeasData            Boolean?          @default(false)
+  signature             String?
+  typePerson            TYPE_PERSON?      @default(NATURAL)
+  organizationUuid      String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  CustomerPos           CustomerPos[]
+  createdBy             String            @db.Uuid
+  createdByInternalUser InternalUser      @relation(fields: [createdBy], references: [uuid])
+  CustomerSell          CustomerSell[]
+  sellBaseInvoice       SellBaseInvoice[]
+  NoteCredit            NoteCredit[]
+  NoteDebit             NoteDebit[]
+  Remisiones            Remisiones[]
+
+  @@map("SBQ_customer")
+}
+
+model CustomerDetails {
+  uuid             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customerUuid     String   @unique @db.Uuid
+  customer         Customer @relation(fields: [customerUuid], references: [uuid])
+  birthDate        DateTime
+  gender           GENDER   @default(MALE)
+  phone            String
+  address          String?
+  address2         String?  @default("")
+  lat              Float?   @default(0)
+  lng              Float?   @default(0)
+  city             String?
+  state            String?
+  country          String?
+  instagram        String?
+  organizationUuid String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("SBQ_customer_details")
+}
+
+model CustomerPos {
+  uuid             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customerUuid     String   @db.Uuid
+  customer         Customer @relation(fields: [customerUuid], references: [uuid])
+  posUuid          String   @db.Uuid
+  pos              Pos      @relation(fields: [posUuid], references: [uuid])
+  organizationUuid String?
+  createdAt        DateTime @default(now())
+
+  @@map("SBQ_customer_pos")
+}
+
+model Sell {
+  uuid             String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  typePayment      TYPE_PAYMENT       @default(CASH)
+  organizationUuid String?
+  wordpress_id     String?
+  wordpress_url    String?            @default("")
+  totalTax         Int?               @default(0)
+  totalShipping    Int?               @default(0)
+  subtotal         Int?               @default(0)
+  total            Int?               @default(0)
+  discount         Int?               @default(0)
+  totalDiscount    Int?               @default(0)
+  createdAt        DateTime           @default(now())
+  status           SELL_STATUS?       @default(PENDING)
+  CustomerSell     CustomerSell?
+  CashboxSell      CashboxSell?
+  SellerSell       SellerSell?
+  SubproductSell   SubproductSell[]
+  SellTaxes        SellTaxes[]
+  SellBaseInvoice  SellBaseInvoice[]
+  SellLegalInvoice SellLegalInvoice[]
+  NoteCredit       NoteCredit[]
+
+  @@map("SBQ_sell")
+}
+
+model CustomerSell {
+  uuid             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customerUuid     String   @db.Uuid
+  customer         Customer @relation(fields: [customerUuid], references: [uuid])
+  sellUuid         String   @unique @db.Uuid
+  sell             Sell     @relation(fields: [sellUuid], references: [uuid])
+  organizationUuid String?
+  createdAt        DateTime @default(now())
+
+  @@map("SBQ_customer_sell")
+}
+
+model CashboxSell {
+  uuid             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cashboxUuid      String   @db.Uuid
+  cashbox          Cashbox  @relation(fields: [cashboxUuid], references: [uuid])
+  sellUuid         String   @unique @db.Uuid
+  sell             Sell     @relation(fields: [sellUuid], references: [uuid])
+  organizationUuid String?
+  createdAt        DateTime @default(now())
+
+  @@map("SBQ_cashbox_sell")
+}
+
+model SellerSell {
+  uuid             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sellerUuid       String       @db.Uuid
+  seller           InternalUser @relation(fields: [sellerUuid], references: [uuid])
+  sellUuid         String       @unique @db.Uuid
+  sell             Sell         @relation(fields: [sellUuid], references: [uuid])
+  organizationUuid String?
+  createdAt        DateTime     @default(now())
+
+  @@map("SBQ_seller_sell")
+}
+
+model SubproductSell {
+  uuid                 String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  subProductUuid       String?                @db.Uuid
+  subProduct           SubProduct?            @relation(fields: [subProductUuid], references: [uuid])
+  productUuid          String?                @db.Uuid
+  product              Product?               @relation(fields: [productUuid], references: [uuid])
+  sellUuid             String                 @db.Uuid
+  sell                 Sell                   @relation(fields: [sellUuid], references: [uuid])
+  quantity             Int?
+  organizationUuid     String?
+  warehouseUuid        String?                @db.Uuid
+  warehouse            Warehouse?             @relation(fields: [warehouseUuid], references: [uuid])
+  createdAt            DateTime               @default(now())
+  SubProductSellReturn SubProductSellReturn[]
+  SellLegalInvoice     SellLegalInvoice[]
+  noteCredit           NoteCredit[]
+  noteDebit            NoteDebit[]
+
+  @@map("SBQ_subproduct_sell")
+}
+
+model SellTaxes {
+  uuid               String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sellUuid           String @db.Uuid
+  Sell               Sell   @relation(fields: [sellUuid], references: [uuid])
+  taxUuid            String @db.Uuid
+  Tax                Taxes  @relation(fields: [taxUuid], references: [uuid])
+  totalProductsValue Int
+  totalTaxvalue      Int
+
+  @@unique([sellUuid, taxUuid])
+  @@map("SBQ_sell_taxes")
+}
+
+model SubProductSellReturn {
+  uuid               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  subproductSellUuid String         @db.Uuid
+  subproductSell     SubproductSell @relation(fields: [subproductSellUuid], references: [uuid])
+  quantity           Int
+  cashReturn         Boolean
+  organizationUuid   String?
+  createdAt          DateTime       @default(now())
+
+  @@map("SBQ_subproduct_sell_return")
+}
+
+model BaseInvoice {
+  uuid              String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key               String
+  styles            String
+  title             String
+  nit               String
+  address           String
+  web               String
+  email             String
+  saldoPorPagar     Int?
+  configInvoice     ConfigInvoice?     @relation(fields: [configInvoiceUuid], references: [uuid])
+  configInvoiceUuid String?            @db.Uuid
+  type_invoice      TYPE_INVOICE
+  type_document     TYPE_DOCS
+  sellBaseInvoice   SellBaseInvoice[]
+  sellLegalInvoice  SellLegalInvoice[]
+  noteCredit        NoteCredit[]
+  noteDebit         NoteDebit[]
+  dateExpedition    DateTime
+  dateExpiration    DateTime
+  organizationUuid  String
+  subtotal          Int
+  totalTax          Int
+  discount          Int
+  tax               Int
+  taxporcentage     Int
+  total             Int
+  description       String
+  resolution        String
+  footer            String
+  createdAt         DateTime           @default(now())
+  BuyBaseInvoice    BuyBaseInvoice[]
+}
+
+model SellBaseInvoice {
+  uuid             String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  data             String
+  pref             String?
+  statusCobro      STATUSCOBROFACTURA?
+  number           String?
+  cashbox          Cashbox?            @relation(fields: [cashboxUuid], references: [uuid])
+  cashboxUuid      String?             @db.Uuid
+  SellUuid         String              @db.Uuid
+  Sell             Sell                @relation(fields: [SellUuid], references: [uuid])
+  organizationUuid String              @db.Uuid
+  isExternal       Boolean
+  customerUuid     String              @db.Uuid
+  customer         Customer            @relation(fields: [customerUuid], references: [uuid])
+  baseInvoiceUuid  String?             @db.Uuid
+  baseInvoice      BaseInvoice?        @relation(fields: [baseInvoiceUuid], references: [uuid])
+  createdAt        DateTime            @default(now())
+}
+
+model BuyBaseInvoice {
+  uuid               String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  data               String
+  pref               String?
+  fechaDeVencimiento DateTime?
+  description        String?
+  pagado             Int?
+  PorPagar           Int?
+  number             String?
+  PurchaseUuid       String      @db.Uuid
+  Purchase           Purchase    @relation(fields: [PurchaseUuid], references: [uuid])
+  organizationUuid   String      @db.Uuid
+  isExternal         Boolean
+  SupplierUuid       String      @db.Uuid
+  Supplier           Supplier    @relation(fields: [SupplierUuid], references: [uuid])
+  baseInvoiceUuid    String      @db.Uuid
+  baseInvoice        BaseInvoice @relation(fields: [baseInvoiceUuid], references: [uuid])
+  createdAt          DateTime    @default(now())
+}
+
+model NoteCredit {
+  uuid                   String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  data                   String
+  pref                   String?
+  numberNote             String?
+  CUDE                   String?
+  statusDian             String?
+  typeNoteCredit         String?
+  description            String?
+  total                  Int?
+  saldoPorPagar          Int?
+  tipoDeNota             TYPE_OF_NOTE?
+  buyOrSell              BUYORSELL?
+  NotaDebitUuid          String?              @unique @db.Uuid
+  NotaDebit              NoteDebit?           @relation("DebitoCredito", fields: [NotaDebitUuid], references: [uuid])
+  noteCreditProducts     NoteCreditProducts[]
+  SellUuid               String               @db.Uuid
+  Sell                   Sell                 @relation(fields: [SellUuid], references: [uuid])
+  organizationUuid       String               @db.Uuid
+  customerUuid           String               @db.Uuid
+  customer               Customer             @relation(fields: [customerUuid], references: [uuid])
+  baseInvoiceUuid        String               @db.Uuid
+  baseInvoice            BaseInvoice          @relation(fields: [baseInvoiceUuid], references: [uuid])
+  createdAt              DateTime             @default(now())
+  SubproductSell         SubproductSell?      @relation(fields: [subproductSellUuid], references: [uuid])
+  subproductSellUuid     String?              @db.Uuid
+  Supplier               Supplier?            @relation(fields: [supplierUuid], references: [uuid])
+  supplierUuid           String?              @db.Uuid
+  SubproductPurchase     SubproductPurchase?  @relation(fields: [subproductPurchaseUuid], references: [uuid])
+  subproductPurchaseUuid String?              @db.Uuid
+}
+
+model NoteCreditProducts {
+  uuid             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  data             String
+  noteCreditUuid   String      @db.Uuid
+  noteCredit       NoteCredit  @relation(fields: [noteCreditUuid], references: [uuid])
+  product          Product?    @relation(fields: [productUuid], references: [uuid])
+  productUuid      String?     @db.Uuid
+  subproduct       SubProduct? @relation(fields: [subproductUuid], references: [uuid])
+  subproductUuid   String?     @db.Uuid
+  quantity         Int
+  organizationUuid String
+  createdAt        DateTime    @default(now())
+}
+
+model NoteDebit {
+  uuid                   String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  data                   String
+  pref                   String?
+  numberNote             String?
+  description            String?
+  total                  Int?
+  saldoPorPagar          Int?
+  noteDebitProducts      NoteDebitProducts[]
+  tipoDeNota             TYPE_OF_NOTE?
+  buyOrSell              BUYORSELL?
+  organizationUuid       String?             @db.Uuid
+  PurchaseUuid           String?             @db.Uuid
+  Purchase               Purchase?           @relation(fields: [PurchaseUuid], references: [uuid])
+  createdAt              DateTime            @default(now())
+  Supplier               Supplier?           @relation(fields: [supplierUuid], references: [uuid])
+  supplierUuid           String?             @db.Uuid
+  SubproductPurchase     SubproductPurchase? @relation(fields: [subproductPurchaseUuid], references: [uuid])
+  subproductPurchaseUuid String?             @db.Uuid
+  BaseInvoice            BaseInvoice?        @relation(fields: [baseInvoiceUuid], references: [uuid])
+  baseInvoiceUuid        String?             @db.Uuid
+  customerUuid           String?             @db.Uuid
+  customer               Customer?           @relation(fields: [customerUuid], references: [uuid])
+  SubproductSell         SubproductSell?     @relation(fields: [subproductSellUuid], references: [uuid])
+  subproductSellUuid     String?             @db.Uuid
+  NoteCredit             NoteCredit?         @relation("DebitoCredito")
+}
+
+model NoteDebitProducts {
+  uuid             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  data             String
+  noteDebitUuid    String      @db.Uuid
+  noteDebit        NoteDebit   @relation(fields: [noteDebitUuid], references: [uuid])
+  product          Product?    @relation(fields: [productUuid], references: [uuid])
+  productUuid      String?     @db.Uuid
+  subproduct       SubProduct? @relation(fields: [subproductUuid], references: [uuid])
+  subproductUuid   String?     @db.Uuid
+  quantity         Int
+  organizationUuid String
+  createdAt        DateTime    @default(now())
+}
+
+model SellLegalInvoice {
+  uuid               String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  data               String
+  type               TYPE_AXCES_LEGAL_INVOICE @default(BASE)
+  baseInvoiceUuid    String                   @db.Uuid
+  baseInvoice        BaseInvoice              @relation(fields: [baseInvoiceUuid], references: [uuid])
+  legalStatus        INVOICE_STATUS           @default(BASE)
+  SellUuid           String?                  @db.Uuid
+  Sell               Sell?                    @relation(fields: [SellUuid], references: [uuid])
+  organizationUuid   String                   @db.Uuid
+  isExternal         Boolean
+  createdAt          DateTime                 @default(now())
+  SubproductSell     SubproductSell?          @relation(fields: [subproductSellUuid], references: [uuid])
+  subproductSellUuid String?                  @db.Uuid
+}
+
+model Purchase {
+  uuid                 String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  typePayment          TYPE_PAYMENT           @default(CASH)
+  organizationUuid     String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  SupplierPurcahse     SupplierPurchase?
+  SubproductPurchase   SubproductPurchase[]
+  purchaseStatus       PURCHASE_STATUS        @default(PENDING)
+  BuyerPurchase        BuyerPurchase?
+  PurchaseLegalInvoice PurchaseLegalInvoice[]
+  NoteDebit            NoteDebit[]
+  BuyBaseInvoice       BuyBaseInvoice[]
+
+  @@map("SBQ_purchase")
+}
+
+model SupplierPurchase {
+  uuid             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierUuid     String   @db.Uuid
+  supplier         Supplier @relation(fields: [supplierUuid], references: [uuid])
+  purchaseUuid     String   @unique @db.Uuid
+  purchase         Purchase @relation(fields: [purchaseUuid], references: [uuid])
+  organizationUuid String?
+  createdAt        DateTime @default(now())
+
+  @@map("SBQ_supplier_purchase")
+}
+
+model BuyerPurchase {
+  uuid             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  buyerUuid        String       @db.Uuid
+  buyer            InternalUser @relation(fields: [buyerUuid], references: [uuid])
+  purchaseUuid     String       @unique @db.Uuid
+  purchase         Purchase     @relation(fields: [purchaseUuid], references: [uuid])
+  organizationUuid String?
+  createdAt        DateTime     @default(now())
+
+  @@map("SBQ_buyer_purchase")
+}
+
+model PurchaseLegalInvoice {
+  uuid                 String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  data                 String
+  internalConsecutivce Int
+  InvoiceSerial        String
+  expiresIn            DateTime
+  baseTotalValue       Int
+  basePendingPay       Int
+  data2                String
+  baseValueReceip      Int
+  description          String
+  firstSubTotal        Int
+  secondSubTotoal      Int
+  type                 TYPE_AXCES_LEGAL_INVOICE @default(BASE)
+  legalStatus          INVOICE_STATUS           @default(BASE)
+  purchaseUuid         String?                  @db.Uuid
+  purchase             Purchase?                @relation(fields: [purchaseUuid], references: [uuid])
+  organizationUuid     String                   @db.Uuid
+  isExternal           Boolean
+  createdAt            DateTime                 @default(now())
+}
+
+model SubproductPurchase {
+  uuid             String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  subProductUuid   String             @db.Uuid
+  subProduct       SubProduct         @relation(fields: [subProductUuid], references: [uuid])
+  productUuid      String?            @db.Uuid
+  Product          Product?           @relation(fields: [productUuid], references: [uuid])
+  purchaseUuid     String             @db.Uuid
+  purchase         Purchase           @relation(fields: [purchaseUuid], references: [uuid])
+  organizationUuid String?
+  createdAt        DateTime           @default(now())
+  quantity         Int                @default(1) //para eliminar
+  UpcomingPurchase UpcomingPurchase[]
+  noteDebit        NoteDebit[]
+  NoteCredit       NoteCredit[]
+
+  @@unique([subProductUuid, purchaseUuid])
+  @@map("SBQ_subproduct_purchase")
+}
+
+model UpcomingPurchase {
+  uuid                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  subProductPurchaseUuid String             @db.Uuid
+  subProductPurchase     SubproductPurchase @relation(fields: [subProductPurchaseUuid], references: [uuid])
+  warehouse              Warehouse          @relation(fields: [warehouse_uuid], references: [uuid])
+  warehouse_uuid         String             @db.Uuid
+  organizationUuid       String?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  subQuantity            Int
+
+  @@unique([subProductPurchaseUuid, warehouse_uuid])
+  @@map("SBQ_upcoming_purchase")
+}
+
+model PurchaseDetails {
+  uuid String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+}
+
+model Discounts {
+  uuid             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String   @unique
+  description      String?
+  percentage       Float
+  organizationUuid String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("SBQ_discounts")
+}
+
+model Supplier {
+  uuid                  String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firstNameContact      String
+  LastNameContact       String
+  supplier_organization SupplierOrganization[]
+  name                  String
+  email                 String
+  emailContact          String
+  BrandSupplier         BrandSupplier[]
+  CategoriesSupplier    CategoriesSupplier[]
+  phone                 String
+  phoneContact          String
+  DNI                   String
+  country               String
+  city                  String
+  state                 String
+  address               String
+  latitude              Float?
+  longitude             Float?
+  instagram             String
+  TypeDOC               TYPE_DNI               @default(CC)
+  profileImg            String?
+  status                SUPPLIERS_STATUS?      @default(ACTIVE)
+  organizationUuid      String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  createdBy             String                 @db.Uuid
+  createdByInternalUser InternalUser           @relation(fields: [createdBy], references: [uuid])
+  SupplierPurchase      SupplierPurchase[]
+  productSupplier       ProductSupplier[]
+  NoteDebit             NoteDebit[]
+  NoteCredit            NoteCredit[]
+  BuyBaseInvoice        BuyBaseInvoice[]
+  ConfigInvoice         ConfigInvoice[]
+
+  @@map("SBQ_supplier")
+}
+
+model SupplierOrganization {
+  uuid              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplier          Supplier     @relation(fields: [supplier_uuid], references: [uuid])
+  supplier_uuid     String       @unique @db.Uuid
+  organization      Organization @relation(fields: [organization_uuid], references: [uuid])
+  organization_uuid String       @db.Uuid
+  organizationUuid  String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@map("SBQ_supplier_organization")
+}
+
+model CategoriesSupplier {
+  uuid             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplier         Supplier   @relation(fields: [supplier_uuid], references: [uuid])
+  supplier_uuid    String     @db.Uuid
+  category         Categories @relation(fields: [categoryUuid], references: [uuid])
+  categoryUuid     String     @db.Uuid
+  organizationUuid String?
+
+  @@map("SBQ_category_supplier")
+}
+
+model Remisiones {
+  uuid             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String
+  prefix           String
+  consecutivo      Int
+  description      String?
+  customer         Customer     @relation(fields: [customerUuid], references: [uuid])
+  customerUuid     String       @db.Uuid
+  product          Product      @relation(fields: [productUuid], references: [uuid])
+  productUuid      String       @db.Uuid
+  subProduct       SubProduct   @relation(fields: [subProductUuid], references: [uuid])
+  subProductUuid   String       @db.Uuid
+  organizationUuid String?
+  vendedor         InternalUser @relation(fields: [vendedorUuid], references: [uuid])
+  vendedorUuid     String       @db.Uuid
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@map("SBQ_remisiones")
+}
+
+model BackofficeUser {
+  uuid                  String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firstname             String
+  lastname              String
+  password              String
+  codePhone             String?
+  phone                 String
+  email                 String?                 @unique
+  country               String
+  state                 String
+  city                  String
+  avatar                String?
+  number1               String?
+  number2               String?
+  organizationUuid      String?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  BackofficeUserDetails BackofficeUserDetails[]
+  BackofficeUserRole    BackofficeUserRole[]
+  //BackofficeUserPermissions BackofficeUserPermissions[]
+  Status                BackofficeUserStatus    @default(ACTIVE)
+
+  @@map("DLPY_backoffice_user")
+}
+
+model BackofficeUserDetails {
+  uuid               String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  BackofficeUserUuid String                     @map("backoffice_user_uuid") @db.Uuid
+  BackofficeUser     BackofficeUser             @relation(fields: [BackofficeUserUuid], references: [uuid])
+  TypeDni            BackofficeUserDocumentType @default(CC)
+  Dni                String
+  organizationUuid   String?
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+
+  @@map("DLPY_backoffice_user_details")
+}
+
+model BackofficeUserRole {
+  uuid               String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  BackofficeUserUuid String                 @map("backoffice_user_uuid") @db.Uuid
+  BackofficeUser     BackofficeUser         @relation(fields: [BackofficeUserUuid], references: [uuid])
+  Role               BackofficeUserRoleType @default(ADMIN)
+  organizationUuid   String?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  @@map("DLPY_backoffice_user_role")
+}
+
+model Brand {
+  uuid              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String              @unique
+  logo              String
+  BrandSupplier     BrandSupplier[]
+  BrandProduct      BrandProduct[]
+  BrandOrganization BrandOrganization[]
+  description       String?
+  organizationUuid  String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@map("SBQ_brand")
+}
+
+model BrandOrganization {
+  uuid              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brand             Brand        @relation(fields: [brandUuid], references: [uuid])
+  brandUuid         String       @unique @db.Uuid
+  organization      Organization @relation(fields: [organization_uuid], references: [uuid])
+  organization_uuid String       @db.Uuid
+  organizationUuid  String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@map("SBQ_brand_organization")
+}
+
+model BrandSupplier {
+  uuid             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplier         Supplier @relation(fields: [supplier_uuid], references: [uuid])
+  supplier_uuid    String   @db.Uuid
+  brand            Brand    @relation(fields: [brandUuid], references: [uuid])
+  brandUuid        String   @db.Uuid
+  organizationUuid String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("SBQ_brand_supplier")
+}
+
+model BrandProduct {
+  uuid             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product          Product  @relation(fields: [product_uuid], references: [uuid])
+  product_uuid     String   @db.Uuid
+  brand            Brand    @relation(fields: [brandUuid], references: [uuid])
+  brandUuid        String   @db.Uuid
+  organizationUuid String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([brandUuid, product_uuid])
+  @@map("SBQ_brand_product")
+}
+
+model Metas {
+  uuid                  String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                  String
+  time                  DateTime
+  amount                Int?
+  clientes              Int?
+  sells                 Int?
+  buys                  Int?
+  shippings             Int?
+  status                MetasStatus  @default(ACTIVE)
+  createdBy             String       @db.Uuid
+  createdByInternalUser InternalUser @relation(fields: [createdBy], references: [uuid])
+  organizationUuid      String?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  @@map("SBQ_metas")
+}
+
+model LogHistory {
+  uuid              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  table             String
+  type_change       String
+  reference         String?
+  organization      Organization @relation(fields: [organization_uuid], references: [uuid])
+  organization_uuid String       @db.Uuid
+  createdAt         DateTime     @default(now())
+
+  @@map("SBQ_log_history")
+}
+
+model Wordpress {
+  uuid                        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                        String
+  url                         String        @unique
+  token                       String
+  image                       String?       @default("")
+  host                        String?       @default("")
+  status                      STATUS?       @default(ACTIVE)
+  product_send_xell_wordpress Boolean?      @default(false)
+  user_send_xell_wordpress    Boolean?      @default(false)
+  order_send_xell_wordpress   Boolean?      @default(false)
+  product_send_wordpress_xell Boolean?      @default(false)
+  user_send_wordpress_xell    Boolean?      @default(false)
+  order_send_wordpress_xell   Boolean?      @default(false)
+  organization                Organization? @relation(fields: [organization_uuid], references: [uuid])
+  organization_uuid           String?       @db.Uuid
+  pos                         Pos?          @relation(fields: [pos_uuid], references: [uuid])
+  pos_uuid                    String?       @db.Uuid
+  createdAt                   DateTime      @default(now())
+  updatedAt                   DateTime      @updatedAt
+
+  @@map("SBQ_wordpress")
+}
+
+model BulkinEvents {
+  uuid                  String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organization          Organization?           @relation(fields: [organization_uuid], references: [uuid])
+  organization_uuid     String?                 @db.Uuid
+  type                  BULKING_TYPE_EVENT
+  percentage            Float
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  BulkingEventsFailures BulkingEventsFailures[]
+
+  @@map("SBQ_bulking_events")
+}
+
+model BulkingEventsFailures {
+  uuid             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bulkingEvent     BulkinEvents? @relation(fields: [bulkingEventUuid], references: [uuid])
+  bulkingEventUuid String?       @db.Uuid
+  position         Int
+  log              String
+  createdAt        DateTime      @default(now())
+
+  @@map("SBQ_bulking_events_failure")
+}
+
+model ConfigInvoice {
+  uuid                  String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organization          Organization  @relation(fields: [organization_uuid], references: [uuid])
+  organization_uuid     String        @db.Uuid
+  status                STATUS        @default(ACTIVE)
+  createBy              String        @db.Uuid
+  createdBy             String        @db.Uuid
+  createdByInternalUser InternalUser  @relation(fields: [createdBy], references: [uuid])
+  cashbox               Cashbox?      @relation(fields: [cashbox_uuid], references: [uuid])
+  cashbox_uuid          String?       @db.Uuid
+  supplier              Supplier?     @relation(fields: [supplier_uuid], references: [uuid])
+  supplier_uuid         String?       @db.Uuid
+  type                  String
+  typeInvoice           TYPEINVOICE
+  name                  String
+  numberInit            Int
+  numberCurrent         Int?
+  numberEnd             Int?
+  pref                  String
+  resolution            String?
+  term                  String
+  notes                 String
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  BaseInvoice           BaseInvoice[]
+
+  @@map("SBQ_config_invoice")
+}
+
+model InvoiceDesign {
+  uuid                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organization          Organization          @relation(fields: [organization_uuid], references: [uuid])
+  organization_uuid     String                @db.Uuid
+  createdBy             String                @db.Uuid
+  createdByInternalUser InternalUser          @relation(fields: [createdBy], references: [uuid])
+  type                  TYPEDESIGNINVOICE
+  styles                InvoiceDesignStyles[]
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  @@map("SBQ_invoice_design")
+}
+
+model InvoiceDesignStyles {
+  uuid              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceDesign     InvoiceDesign @relation(fields: [invoiceDesignUuid], references: [uuid])
+  invoiceDesignUuid String        @db.Uuid
+  key               String
+  value             String
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@map("SBQ_invoice_design_styles")
+}
+
+//model BackofficeUserPermissions {
+//  uuid               String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+//  BackofficeUserUuid String                @map("backoffice_user_uuid") @db.Uuid
+//  BackofficeUser     BackofficeUser        @relation(fields: [BackofficeUserUuid], references: [uuid])
+//  PermissionUuid     String                @map("permission_uuid") @db.Uuid
+//  Permission         BackofficePermissions @relation(fields: [PermissionUuid], references: [uuid])
+//  createdAt          DateTime              @default(now())
+//  updatedAt          DateTime              @updatedAt
+
+//  @@unique([BackofficeUserUuid, PermissionUuid])
+//  @@map("DLPY_backoffice_user_permissions")
+//}
+
+//model BackofficePermissions {
+//  uuid                      String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+//  Permission                BackfficePermissions        @default(APPROVE_USERS)
+//  createdAt                 DateTime                    @default(now())
+//  updatedAt                 DateTime                    @updatedAt
+//  BackofficeUserPermissions BackofficeUserPermissions[]
+
+//  @@map("DLPY_backoffice_permissions")
+//}
+
+enum BackofficeUserRoleType {
+  ADMIN
+  USER
+
+  @@map("DLPY_backoffice_user_role_type")
+}
+
+enum BackofficeUserDocumentType {
+  CC
+  CE
+  PASSPORT
+
+  @@map("DLPY_BACKOFFICE_USER_DOCUMENT_TYPE")
+}
+
+enum BackfficePermissions {
+  CREATE_USER
+  CREATE_CUSTOMER
+  CREATE_DRIVERS
+  CREATE_MANGERS
+  VIEW_USERS
+  VIEW_DRIVERS
+  APPROVE_USERS
+  EXPORT_FILES
+  MANAGE_ORDERS
+  VIEW_STATS
+  VIEW_ORDER_HISTORY
+
+  @@map("DLPY_BACKOFFICE_PERMISSIONS")
+}
+
+enum BackofficeUserStatus {
+  ACTIVE
+  INACTIVE
+
+  @@map("DLPY_backoffice_user_status")
+}
+
+//TODO: create relation Discounts to Sell
+
+enum ACCOUNT_STATUS {
+  CREATED
+  ACTIVE
+  INACTIVE
+  DELETED
+  BLOCKED
+}
+
+enum TYPE_ACCOUNT_DNI {
+  DNI
+  RUC
+  PASSPORT
+  NIT
+}
+
+enum PRODUCT_STATUS {
+  AVAILABLE
+  UNAVAILABLE
+  DELETED
+  LOW_STOCK
+  EXHAUSTED
+}
+
+//Enumerators
+enum GENDER {
+  MALE
+  FEMALE
+}
+
+enum TYPE_DNI {
+  CC
+  CE
+  NIT
+  PP
+  DIE
+  TI
+  NUIP
+  TE
+  RC
+}
+
+enum POSITION {
+  POS_MANAGER
+  WAREHOUSE_MANAGER
+}
+
+enum ROLE {
+  SUPERUSER
+  ACCOUNTANT
+  ADMINISTRATIVE_ASSISTANT
+  ADMINISTRATOR
+  WAREHOUSE_MANAGER
+  SELLER
+  CASHIER
+  GROCER
+  SUPER_ADMINISTRATOR
+}
+
+enum PERMISSION {
+  ALL
+  SELL
+  BUY
+  CREATE_SELLER
+  UPDATE_SELLER
+  READ_SELLER
+  ALL_SELLERS
+  CREATE_USER
+  UPDATE_USER
+  READ_USER
+  ALL_USERS
+  CREATE_PRODUCTS
+  UPDATE_PRODUCT
+  READ_PRODUCT
+  ALL_PRODUCTS
+  CREATE_SELLERS
+  CREATE_CASHBOX
+  UPDATE_CASHBOX
+  READ_CASHBOX
+  ALL_CASHBOX
+  OPEN_CLOSE_CASHBOX
+  CREATE_CUSTOMER
+  UPDATE_CUSTOMER
+  READ_CUSTOMER
+  ALL_CUSTOMERS
+  CREATE_SUPPLIER
+  UPDATE_SUPPLIER
+  READ_SUPPLIER
+  ALL_SUPPLIERS
+  ALL_PAYMENT_METHOD
+  ALL_CONFIG
+  CREATE_BANKS
+  UPDATE_BANKS
+  READ_BANKS
+  ALL_BANKS
+  CREATE_POS
+  UPDATE_POS
+  READ_POS
+  ALL_POS
+  CREATE_WAREHOUSE
+  UPDATE_WAREHOUSE
+  READ_WAREHOUSE
+  ALL_WAREHOUSE
+  CHANGE_PRODUCT_FOR_WAREHOUSE
+  ALL_PRODUCTS_PURCHASE
+  READ_PRODUCTS_PURCHASE
+  CREATE_PRODUCTS_PURCHASE
+  UPDATE_PRODUCTS_PURCHASE
+  ALL_PURCHASE
+  READ_PURCHASE
+  CREATE_PURCHASE
+  UPDATE_PURCHASE
+  ALL_SELL
+  READ_SELL
+  CREATE_SELL
+  UPDATE_SELL
+  EXPORT_DATA
+  EXPORT_FINANCIAL_REPORTS
+  EXPORT_STATS
+  CONFIG_INFO_PERSONAL
+  CONFIG_INFO_BUSINESS
+  CONFIG_BILLER
+  CONFIG_SHIPPINGS
+  CONFIG_VIRTUAL_SHOPS
+  CONFIG_FINTECH
+  CONFIG_TAGS //TODO: Cambiar a CONFIG_LABEL
+  CONFIG_CATEGORY
+  CONFIG_BRAND
+  CONFIG_PAYMENTS
+  CONFIG_METAS
+  CONFIG_IMPUESTOS
+  CONFIG_INVOICE
+  INVOICE_DESIGN
+  INVOICE_BASE
+}
+
+enum CURRENCIES {
+  USD
+  COP
+}
+
+enum BANK_ACCOUNT_TYPE {
+  CHECKING
+  SAVINGS
+}
+
+enum STATUS_BANK_ACCOUNT {
+  ACTIVE
+  INACTIVE
+  DELETED
+  BLOCKED
+}
+
+enum CASHBOX_STATUS {
+  AVAILABLE
+  UNAVAILABLE
+  DELETED
+}
+
+enum POS_STATUS {
+  AVAILABLE
+  UNAVAILABLE
+  DELETED
+}
+
+enum LOGIN_PROVIDER {
+  GOOGLE
+  EMAIL
+}
+
+enum STATUS {
+  ACTIVE
+  INACTIVE
+  DELETED
+  BLOCKED
+}
+
+enum WAREHOUSE_STATUS {
+  AVAILABLE
+  UNAVAILABLE
+  DELETED
+}
+
+enum PRODUCT_TYPE {
+  VARIABLE
+  FIXED
+}
+
+enum TYPE_PAYMENT {
+  CASH
+  CREDIT_CARD
+  DEBIT_CARD
+  VOUCHER
+}
+
+enum MANAGER_INCHARGE_STATUS {
+  CURRENT
+  INACTIVE
+}
+
+enum GROCER_INCHARGE_STATUS {
+  CURRENT
+  INACTIVE
+}
+
+enum CUSTOMER_STATUS {
+  ACTIVE
+  INACTIVE
+  DELETED
+}
+
+enum BUYORSELL {
+  BUY
+  SELL
+}
+
+enum PURCHASE_STATUS {
+  PENDING
+  PROCESSING
+  CANCELLED
+  COMPLETED
+}
+
+enum TYPE_PERSON {
+  NATURAL
+  JURIDICAL
+}
+
+enum TAX_TYPE_LOCATION {
+  CITY
+  COUNTRY
+}
+
+enum TAX_TYPE {
+  TOTAL
+  PER_PRODUCT
+}
+
+enum TAX_PERIOD {
+  MONTH
+  TWO_MONTH
+  THREE_MONTH
+  FOUR_MONTH
+  SIX_MONTH
+  ANNUAL
+}
+
+enum TYPE_LOCATION {
+  FISICA
+  VIRTUAL
+}
+
+enum MetasStatus {
+  ACTIVE
+  INACTIVE
+  DELETED
+}
+
+enum CURRENCYSTATUS {
+  ACTIVE
+  INACTIVE
+  DELETED
+}
+
+enum DIAN_AXCES_DETAILS_STATUS {
+  ACTIVE
+  EXPIRED
+  DONE
+  DELETED
+}
+
+enum SELL_STATUS {
+  PENDING
+  PROCESSING
+  CANCELLED
+  COMPLETED
+}
+
+enum SUPPLIERS_STATUS {
+  ACTIVE
+  INACTIVE
+  DELETED
+}
+
+enum BYBUYORSELL {
+  BUY
+  SELL
+  BUYANDSELL
+}
+
+enum TYPE_AXCES_LEGAL_INVOICE {
+  NOTA_CREDITO
+  NOTA_DEBITO
+  BASE
+}
+
+enum TYPE_INVOICE {
+  COMPRA
+  VENTA
+}
+
+enum TYPE_DOCS {
+  NOTA_CREDITO
+  NOTA_DEBITO
+  FACTURA
+}
+
+enum INVOICE_STATUS {
+  BASE
+  MODIFY
+  DELETED
+}
+
+enum BULKING_TYPE_EVENT {
+  PRODUCT
+  WAREHOUSE
+  PURCHASE_INVOICE
+  SELL_INVOICE
+  CUSTOMERS
+}
+
+enum TYPEINVOICE {
+  BUY_INVOICE
+  SALES_INVOICE
+  CREDIT_NOTE
+  DEBIT_NOTE
+}
+
+enum TYPEDESIGNINVOICE {
+  FACTURAS
+  COTIZACIONES
+  REMISIONES
+  ORDENES_COMPRA
+}
+
+enum TYPE_OF_NOTE {
+  DEVOLUCION
+  DESCUENTO
+}
+
+enum STATUSCOBROFACTURA {
+  COBRADA
+  POR_COBRAR
+  ANULADA
+  BORRADOR
 }

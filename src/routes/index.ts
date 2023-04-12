@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { baseEventController } from "../controllers";
+import bulkRouter from "./Bulks";
 
 const router = Router();
 
-router.post("/event", baseEventController)
+router.use("/bulks", bulkRouter)
 
 export default router

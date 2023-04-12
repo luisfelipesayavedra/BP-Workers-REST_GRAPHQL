@@ -14,12 +14,12 @@ export const EventResolver =  {
 
     resolve: async (_parent: any, _args: any, _ctx: subsContext) => {
         const {id} = _args
-        const bulk = await _ctx.prisma.bulkings.findUnique({
+        const bulk = await _ctx.prisma.bulkinEvents.findUnique({
           where: {
-            id,
+          uuid: id,
           },
           include: {
-            BulkingsError: true
+            BulkingEventsFailures: true
           }
         })
         return bulk
