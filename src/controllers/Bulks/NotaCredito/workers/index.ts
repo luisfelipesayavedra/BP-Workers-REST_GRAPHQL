@@ -77,7 +77,7 @@ const bulkNotaCredito = async () => {
                     CUDE: data[index].cude,
                     description: data[index].razon,
                     numberNote: data[index].numero_de_factura,
-                    saldoPorPagar: data[index].por_pagar_venta,
+                    saldoPorPagar: parseInt(String(parseFloat(data[index].por_pagar_venta.replace(/[^0-9.-]+/g,"")) * 100)),
                     statusDian: data[index].estado_ante_dian,
                     tipoDeNota: data[index].tipo_de_nota_credito,
                     total: parseInt(String(parseFloat(data[index].total.replace(/[^0-9.-]+/g,"")) * 100)),
@@ -88,7 +88,7 @@ const bulkNotaCredito = async () => {
                                     productUuid: item.uuid,
                                     data: "",
                                     organizationUuid,
-                                    quantity: item.cantidad_del_item
+                                    quantity: parseInt(item.cantidad_del_item)
                                 }
                             })
                         }
