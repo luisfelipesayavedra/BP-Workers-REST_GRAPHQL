@@ -54,7 +54,6 @@ model InternalUser {
   configInvoice                 ConfigInvoice[]
   InvoiceDesign                 InvoiceDesign[]
   Remisiones                    Remisiones[]
-
   @@map("SBQ_internal_user")
 }
 
@@ -64,7 +63,6 @@ model InternalUserGoogleProvider {
   internal_user_uuid String       @unique @db.Uuid
   internal_user      InternalUser @relation(fields: [internal_user_uuid], references: [uuid])
   organizationUuid   String?
-
   @@map("SBQ_internal_user_google_provider")
 }
 
@@ -76,7 +74,6 @@ model InternalUserCellphone {
   organizationUuid   String?
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
-
   @@map("SBQ_internal_user_cellphone")
 }
 
@@ -93,7 +90,6 @@ model InternalUserAddress {
   organizationUuid   String?
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
-
   @@map("SBQ_internal_user_address")
 }
 
@@ -105,7 +101,6 @@ model InternalUserPassword {
   organizationUuid String?
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
-
   @@map("SBQ_internal_user_password")
 }
 
@@ -118,7 +113,6 @@ model UserRole {
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   user             InternalUser[]
-
   @@map("SBQ_user_role")
 }
 
@@ -131,7 +125,6 @@ model UserHasPermission {
   organizationUuid   String?
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
-
   @@map("SBQ_user_has_permission")
 }
 
@@ -144,7 +137,6 @@ model Permission {
   organizationUuid         String?
   createdAt                DateTime            @default(now())
   updatedAt                DateTime            @updatedAt
-
   @@map("SBQ_permission")
 }
 
@@ -159,7 +151,6 @@ model WarehouseManager {
   organizationUuid   String?
   createdAt          DateTime                @default(now())
   updatedAt          DateTime                @updatedAt
-
   @@unique([internal_user_uuid, warehouse_uuid])
   @@map("SBQ_warehouse_manager")
 }
@@ -174,14 +165,13 @@ model WarehouseGrocer {
   organizationUuid   String?
   createdAt          DateTime               @default(now())
   updatedAt          DateTime               @updatedAt
-
   @@unique([internal_user_uuid, warehouse_uuid])
   @@map("SBQ_warehouse_grocer")
 }
 
 model Warehouse {
-  uuid               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name               String             @unique
+  uuid               String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String               @unique
   description        String
   warehouse_manager  WarehouseManager[]
   warehouse_grocer   WarehouseGrocer[]
@@ -192,15 +182,15 @@ model Warehouse {
   state              String?
   country            String?
   phone              String?
-  status             WAREHOUSE_STATUS   @default(AVAILABLE)
+  status             WAREHOUSE_STATUS     @default(AVAILABLE)
   organizationUuid   String?
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
   product_warehouse  ProductWarehouse[]
   subproductSell     SubproductSell[]
+  // subproductPurchase SubproductPurchase[]
   WarehousePos       WarehousePos[]
   UpcomingPurchase   UpcomingPurchase[]
-
   @@map("SBQ_warehouse")
 }
 
@@ -213,7 +203,6 @@ model WarehousePos {
   organizationUuid String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
-
   @@unique([warehouse_uuid, pos_uuid])
   @@map("SBQ_warehouse_pos")
 }
@@ -245,7 +234,6 @@ model Pos {
   SellerPos          SellerPos[]
   WarehousePos       WarehousePos[]
   wordpress          Wordpress[]
-
   @@map("SBQ_pos")
 }
 
@@ -258,7 +246,6 @@ model PosManager {
   organizationUuid   String?
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
-
   @@map("SBQ_pos_manager")
 }
 
@@ -281,7 +268,6 @@ model Cashbox {
   UserCashbox          UserCashbox[]
   TaxesCashbox         TaxesCashbox[]
   SellBaseInvoice      SellBaseInvoice[]
-
   @@map("SBQ_cashbox")
 }
 
@@ -294,7 +280,6 @@ model UserCashbox {
   organizationUuid   String?
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
-
   @@unique([internal_user_uuid, cashbox_uuid])
   @@map("SBQ_user_cashbox")
 }
@@ -308,7 +293,6 @@ model PaymentMethodCashbox {
   organizationUuid    String?
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
-
   @@unique([cashbox_uuid, payment_method_uuid])
   @@map("SBQ_payment_method_cashbox")
 }
@@ -321,7 +305,6 @@ model PaymentMethod {
   createdAt              DateTime               @default(now())
   updatedAt              DateTime               @updatedAt
   payment_method_cashbox PaymentMethodCashbox[]
-
   @@map("SBQ_payment_method")
 }
 
@@ -342,7 +325,6 @@ model CurrencyCashbox {
   organizationUuid String?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
-
   @@unique([cashbox_uuid, currency_uuid])
 }
 
@@ -355,7 +337,6 @@ model PosCashbox {
   organizationUuid String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
-
   @@map("SBQ_pos_cashbox")
 }
 
@@ -368,7 +349,6 @@ model BankAccountCashbox {
   organizationUuid  String?
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
-
   @@unique([bank_account_uuid, cashbox_uuid])
   @@map("SBQ_bank_account_cashbox")
 }
@@ -383,7 +363,6 @@ model SellerPos {
   organizationUuid   String?
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
-
   @@map("SBQ_seller_pos")
 }
 
@@ -400,7 +379,6 @@ model ProductWarehouse {
   initialStock     Float       @default(0.0)
   organizationUuid String?
   createdAt        DateTime    @default(now())
-
   @@unique([warehouse_uuid, subProductUuid, product_uuid])
   @@map("SBQ_product_warehouse")
 }
@@ -416,8 +394,8 @@ model Product {
   byBuyOrSell         BYBUYORSELL?         @default(BUYANDSELL)
   principalImage      String?
   SKU                 String?
-  price               Int?
-  minimalPrice        Int?
+  price               BigInt?              @default(0) @db.BigInt
+  minimalPrice        BigInt?              @default(0) @db.BigInt
   wordpress_id        String?              @default("")
   height              Float?               @default(0.0)
   length              Float?               @default(0.0)
@@ -438,7 +416,6 @@ model Product {
   NoteCreditProducts  NoteCreditProducts[]
   NoteDebitProducts   NoteDebitProducts[]
   Remisiones          Remisiones[]
-
   @@map("SBQ_product")
 }
 
@@ -453,7 +430,6 @@ model ProductSupplier {
   updatedAt        DateTime    @updatedAt
   SubProduct       SubProduct? @relation(fields: [subProductUuid], references: [uuid])
   subProductUuid   String?     @db.Uuid
-
   @@map("SBQ_product_supplier")
 }
 
@@ -463,14 +439,13 @@ model ProductGallery {
   product_uuid     String  @db.Uuid
   image            String
   organizationUuid String?
-
   @@map("SBQ_product_gallery")
 }
 
 model SubProduct {
   uuid                   String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  price                  Int
-  buyPrice               Int                     @default(0)
+  price                  BigInt                  @default(0) @db.BigInt
+  buyPrice               BigInt                  @default(0) @db.BigInt
   minimalPrice           Int
   status                 PRODUCT_STATUS?         @default(AVAILABLE)
   SKU                    String
@@ -495,7 +470,6 @@ model SubProduct {
   NoteCreditProducts     NoteCreditProducts[]
   NoteDebitProducts      NoteDebitProducts[]
   Remisiones             Remisiones[]
-
   @@map("SBQ_subproduct")
 }
 
@@ -518,7 +492,6 @@ model CategoriesSubProducts {
   organizationUuid String?
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
-
   @@unique([subproductUuid, categoryUuid])
   @@map("SBQ_categories_subproducts")
 }
@@ -533,7 +506,6 @@ model CategoriesProducts {
   organizationUuid String?
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
-
   @@unique([productUuid, categoryUuid])
   @@map("SBQ_categories_products")
 }
@@ -552,7 +524,6 @@ model Categories {
   CategoriesOrganization CategoriesOrganization?
   CategoriesSupplier     CategoriesSupplier[]
   Categories             Categories[]            @relation("CategoriesToCategories")
-
   @@map("SBQ_categories")
 }
 
@@ -562,7 +533,6 @@ model CategoriesOrganization {
   category         Categories   @relation(fields: [categoryUuid], references: [uuid])
   organizationUuid String       @db.Uuid
   organization     Organization @relation(fields: [organizationUuid], references: [uuid])
-
   @@map("SBQ_category_organizaiton")
 }
 
@@ -609,7 +579,6 @@ model Organization {
   BulkinEvents              BulkinEvents[]
   ConfigInvoice             ConfigInvoice[]
   InvoiceDesign             InvoiceDesign[]
-
   @@map("SBQ_organization")
 }
 
@@ -621,7 +590,6 @@ model ActivitiesOrganization {
   activity         Activities   @relation(fields: [activityUuid], references: [uuid])
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
-
   @@map("SBQ_activities_organization")
 }
 
@@ -655,7 +623,6 @@ model OrganizationDocumentation {
   organization      Organization @relation(fields: [organizationUuid], references: [uuid])
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
-
   @@map("SBQ_organization_documentation")
 }
 
@@ -683,7 +650,6 @@ model Taxes {
   updatedAt         DateTime          @updatedAt
   TaxesCashbox      TaxesCashbox[]
   SellTaxes         SellTaxes[]
-
   @@map("SBQ_taxes")
 }
 
@@ -696,7 +662,6 @@ model TaxesCashbox {
   organizationUuid String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
-
   @@unique([cashboxUuid, taxUuid])
   @@map("SBQ_taxes_cashbox")
 }
@@ -733,7 +698,6 @@ model Labels {
   organization         Organization?           @relation(fields: [organizationUuid], references: [uuid])
   createdAt            DateTime                @default(now())
   updatedAt            DateTime                @updatedAt
-
   @@map("SBQ_labels")
 }
 
@@ -748,7 +712,6 @@ model LabelsItems {
   label     Labels   @relation(fields: [labelUuid], references: [uuid])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   @@map("SBQ_labels_items")
 }
 
@@ -763,7 +726,6 @@ model LabelsOrgInfo {
   labelsDeliveryDetailsUuid String?                @db.Uuid
   LabelsStorageDetails      LabelsStorageDetails?  @relation(fields: [labelsStorageDetailsUuid], references: [uuid])
   labelsStorageDetailsUuid  String?                @db.Uuid
-
   @@map("SBQ_labels_organization_info")
 }
 
@@ -778,7 +740,6 @@ model LabelsProdInfo {
   labelsDeliveryDetailsUuid String?                @db.Uuid
   LabelsStorageDetails      LabelsStorageDetails?  @relation(fields: [labelsStorageDetailsUuid], references: [uuid])
   labelsStorageDetailsUuid  String?                @db.Uuid
-
   @@map("SBQ_labels_product_info")
 }
 
@@ -793,7 +754,6 @@ model LabelsDeliveryDetails {
   organizationUuid String?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
-
   @@map("SBQ_labels_delivery_info")
 }
 
@@ -808,7 +768,6 @@ model LabelsStorageDetails {
   organizationUuid String?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
-
   @@map("SBQ_labels_storage_info")
 }
 
@@ -821,7 +780,6 @@ model LabelsStyles {
   organizationUuid String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
-
   @@map("SBQ_labels_styles")
 }
 
@@ -843,7 +801,6 @@ model InvoiceLabelItems {
   invoiceLabel     InvoiceLabel @relation(fields: [invoiceLabelUuid], references: [uuid])
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
-
   @@map("SBQ_invoice_labels_items")
 }
 
@@ -856,7 +813,6 @@ model BankAccountOrganization {
   organizationUuid  String?
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
-
   @@map("SBQ_bank_account_organization")
 }
 
@@ -877,7 +833,6 @@ model BankAccount {
   bank_account_cashbox      BankAccountCashbox[]
   bank_account_organization BankAccountOrganization[]
   amount                    Float                     @default(0)
-
   @@map("SBQ_bank_account")
 }
 
@@ -913,7 +868,6 @@ model Customer {
   NoteCredit            NoteCredit[]
   NoteDebit             NoteDebit[]
   Remisiones            Remisiones[]
-
   @@map("SBQ_customer")
 }
 
@@ -935,7 +889,6 @@ model CustomerDetails {
   organizationUuid String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
-
   @@map("SBQ_customer_details")
 }
 
@@ -947,7 +900,6 @@ model CustomerPos {
   pos              Pos      @relation(fields: [posUuid], references: [uuid])
   organizationUuid String?
   createdAt        DateTime @default(now())
-
   @@map("SBQ_customer_pos")
 }
 
@@ -957,12 +909,12 @@ model Sell {
   organizationUuid String?
   wordpress_id     String?
   wordpress_url    String?            @default("")
-  totalTax         Int?               @default(0)
-  totalShipping    Int?               @default(0)
-  subtotal         Int?               @default(0)
-  total            Int?               @default(0)
-  discount         Int?               @default(0)
-  totalDiscount    Int?               @default(0)
+  totalTax         BigInt?            @default(0) @db.BigInt
+  totalShipping    BigInt?            @default(0) @db.BigInt
+  subtotal         BigInt?            @default(0) @db.BigInt
+  total            BigInt?            @default(0) @db.BigInt
+  discount         BigInt?            @default(0) @db.BigInt
+  totalDiscount    BigInt?            @default(0) @db.BigInt
   createdAt        DateTime           @default(now())
   status           SELL_STATUS?       @default(PENDING)
   CustomerSell     CustomerSell?
@@ -973,7 +925,6 @@ model Sell {
   SellBaseInvoice  SellBaseInvoice[]
   SellLegalInvoice SellLegalInvoice[]
   NoteCredit       NoteCredit[]
-
   @@map("SBQ_sell")
 }
 
@@ -985,7 +936,6 @@ model CustomerSell {
   sell             Sell     @relation(fields: [sellUuid], references: [uuid])
   organizationUuid String?
   createdAt        DateTime @default(now())
-
   @@map("SBQ_customer_sell")
 }
 
@@ -997,7 +947,6 @@ model CashboxSell {
   sell             Sell     @relation(fields: [sellUuid], references: [uuid])
   organizationUuid String?
   createdAt        DateTime @default(now())
-
   @@map("SBQ_cashbox_sell")
 }
 
@@ -1009,7 +958,6 @@ model SellerSell {
   sell             Sell         @relation(fields: [sellUuid], references: [uuid])
   organizationUuid String?
   createdAt        DateTime     @default(now())
-
   @@map("SBQ_seller_sell")
 }
 
@@ -1030,7 +978,6 @@ model SubproductSell {
   SellLegalInvoice     SellLegalInvoice[]
   noteCredit           NoteCredit[]
   noteDebit            NoteDebit[]
-
   @@map("SBQ_subproduct_sell")
 }
 
@@ -1042,7 +989,6 @@ model SellTaxes {
   Tax                Taxes  @relation(fields: [taxUuid], references: [uuid])
   totalProductsValue Int
   totalTaxvalue      Int
-
   @@unique([sellUuid, taxUuid])
   @@map("SBQ_sell_taxes")
 }
@@ -1055,7 +1001,6 @@ model SubProductSellReturn {
   cashReturn         Boolean
   organizationUuid   String?
   createdAt          DateTime       @default(now())
-
   @@map("SBQ_subproduct_sell_return")
 }
 
@@ -1068,7 +1013,7 @@ model BaseInvoice {
   address           String
   web               String
   email             String
-  saldoPorPagar     Int?
+  saldoPorPagar     BigInt?
   configInvoice     ConfigInvoice?     @relation(fields: [configInvoiceUuid], references: [uuid])
   configInvoiceUuid String?            @db.Uuid
   type_invoice      TYPE_INVOICE
@@ -1080,12 +1025,12 @@ model BaseInvoice {
   dateExpedition    DateTime
   dateExpiration    DateTime
   organizationUuid  String
-  subtotal          Int
-  totalTax          Int
-  discount          Int
-  tax               Int
+  subtotal          BigInt             @db.BigInt
+  totalTax          BigInt             @db.BigInt
+  discount          BigInt             @db.BigInt
+  tax               BigInt
   taxporcentage     Int
-  total             Int
+  total             BigInt             @db.BigInt
   description       String
   resolution        String
   footer            String
@@ -1107,8 +1052,8 @@ model SellBaseInvoice {
   isExternal       Boolean
   customerUuid     String              @db.Uuid
   customer         Customer            @relation(fields: [customerUuid], references: [uuid])
-  baseInvoiceUuid  String?             @db.Uuid
-  baseInvoice      BaseInvoice?        @relation(fields: [baseInvoiceUuid], references: [uuid])
+  baseInvoiceUuid  String              @db.Uuid
+  baseInvoice      BaseInvoice         @relation(fields: [baseInvoiceUuid], references: [uuid])
   createdAt        DateTime            @default(now())
 }
 
@@ -1118,11 +1063,11 @@ model BuyBaseInvoice {
   pref               String?
   fechaDeVencimiento DateTime?
   description        String?
-  pagado             Int?
-  PorPagar           Int?
+  pagado             BigInt?     @db.BigInt
+  PorPagar           BigInt?     @db.BigInt
   number             String?
-  PurchaseUuid       String      @db.Uuid
-  Purchase           Purchase    @relation(fields: [PurchaseUuid], references: [uuid])
+  PurchaseUuid       String?     @db.Uuid
+  Purchase           Purchase?   @relation(fields: [PurchaseUuid], references: [uuid])
   organizationUuid   String      @db.Uuid
   isExternal         Boolean
   SupplierUuid       String      @db.Uuid
@@ -1141,20 +1086,20 @@ model NoteCredit {
   statusDian             String?
   typeNoteCredit         String?
   description            String?
-  total                  Int?
-  saldoPorPagar          Int?
+  total                  BigInt?              @db.BigInt
+  saldoPorPagar          BigInt?              @db.BigInt
   tipoDeNota             TYPE_OF_NOTE?
   buyOrSell              BUYORSELL?
   NotaDebitUuid          String?              @unique @db.Uuid
   NotaDebit              NoteDebit?           @relation("DebitoCredito", fields: [NotaDebitUuid], references: [uuid])
   noteCreditProducts     NoteCreditProducts[]
-  SellUuid               String               @db.Uuid
-  Sell                   Sell                 @relation(fields: [SellUuid], references: [uuid])
+  SellUuid               String?              @db.Uuid
+  Sell                   Sell?                @relation(fields: [SellUuid], references: [uuid])
   organizationUuid       String               @db.Uuid
-  customerUuid           String               @db.Uuid
-  customer               Customer             @relation(fields: [customerUuid], references: [uuid])
-  baseInvoiceUuid        String               @db.Uuid
-  baseInvoice            BaseInvoice          @relation(fields: [baseInvoiceUuid], references: [uuid])
+  customerUuid           String?              @db.Uuid
+  customer               Customer?            @relation(fields: [customerUuid], references: [uuid])
+  baseInvoiceUuid        String?              @db.Uuid
+  baseInvoice            BaseInvoice?         @relation(fields: [baseInvoiceUuid], references: [uuid])
   createdAt              DateTime             @default(now())
   SubproductSell         SubproductSell?      @relation(fields: [subproductSellUuid], references: [uuid])
   subproductSellUuid     String?              @db.Uuid
@@ -1184,8 +1129,8 @@ model NoteDebit {
   pref                   String?
   numberNote             String?
   description            String?
-  total                  Int?
-  saldoPorPagar          Int?
+  total                  BigInt?             @db.BigInt
+  saldoPorPagar          BigInt?             @db.BigInt
   noteDebitProducts      NoteDebitProducts[]
   tipoDeNota             TYPE_OF_NOTE?
   buyOrSell              BUYORSELL?
@@ -1240,6 +1185,12 @@ model Purchase {
   uuid                 String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   typePayment          TYPE_PAYMENT           @default(CASH)
   organizationUuid     String?
+  totalTax             BigInt?                @default(0) @db.BigInt
+  totalShipping        BigInt?                @default(0) @db.BigInt
+  subtotal             BigInt?                @default(0) @db.BigInt
+  total                BigInt?                @default(0) @db.BigInt
+  discount             BigInt?                @default(0) @db.BigInt
+  totalDiscount        BigInt?                @default(0) @db.BigInt
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
   SupplierPurcahse     SupplierPurchase?
@@ -1249,7 +1200,7 @@ model Purchase {
   PurchaseLegalInvoice PurchaseLegalInvoice[]
   NoteDebit            NoteDebit[]
   BuyBaseInvoice       BuyBaseInvoice[]
-
+  // upcomingPurchase     UpcomingPurchase[]
   @@map("SBQ_purchase")
 }
 
@@ -1261,7 +1212,6 @@ model SupplierPurchase {
   purchase         Purchase @relation(fields: [purchaseUuid], references: [uuid])
   organizationUuid String?
   createdAt        DateTime @default(now())
-
   @@map("SBQ_supplier_purchase")
 }
 
@@ -1273,7 +1223,6 @@ model BuyerPurchase {
   purchase         Purchase     @relation(fields: [purchaseUuid], references: [uuid])
   organizationUuid String?
   createdAt        DateTime     @default(now())
-
   @@map("SBQ_buyer_purchase")
 }
 
@@ -1301,8 +1250,8 @@ model PurchaseLegalInvoice {
 
 model SubproductPurchase {
   uuid             String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  subProductUuid   String             @db.Uuid
-  subProduct       SubProduct         @relation(fields: [subProductUuid], references: [uuid])
+  subProductUuid   String?            @db.Uuid
+  subProduct       SubProduct?        @relation(fields: [subProductUuid], references: [uuid])
   productUuid      String?            @db.Uuid
   Product          Product?           @relation(fields: [productUuid], references: [uuid])
   purchaseUuid     String             @db.Uuid
@@ -1313,8 +1262,8 @@ model SubproductPurchase {
   UpcomingPurchase UpcomingPurchase[]
   noteDebit        NoteDebit[]
   NoteCredit       NoteCredit[]
-
-  @@unique([subProductUuid, purchaseUuid])
+  // Warehouse        Warehouse[]
+  // warehouseUuid    String?            @db.Uuid
   @@map("SBQ_subproduct_purchase")
 }
 
@@ -1328,7 +1277,8 @@ model UpcomingPurchase {
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
   subQuantity            Int
-
+  // purchase               Purchase           @relation(fields: [purchaseUuid], references: [uuid])
+  // purchaseUuid           String             @db.Uuid
   @@unique([subProductPurchaseUuid, warehouse_uuid])
   @@map("SBQ_upcoming_purchase")
 }
@@ -1345,7 +1295,6 @@ model Discounts {
   organizationUuid String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
-
   @@map("SBQ_discounts")
 }
 
@@ -1383,7 +1332,6 @@ model Supplier {
   NoteCredit            NoteCredit[]
   BuyBaseInvoice        BuyBaseInvoice[]
   ConfigInvoice         ConfigInvoice[]
-
   @@map("SBQ_supplier")
 }
 
@@ -1396,7 +1344,6 @@ model SupplierOrganization {
   organizationUuid  String?
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
-
   @@map("SBQ_supplier_organization")
 }
 
@@ -1407,7 +1354,6 @@ model CategoriesSupplier {
   category         Categories @relation(fields: [categoryUuid], references: [uuid])
   categoryUuid     String     @db.Uuid
   organizationUuid String?
-
   @@map("SBQ_category_supplier")
 }
 
@@ -1428,7 +1374,6 @@ model Remisiones {
   vendedorUuid     String       @db.Uuid
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
-
   @@map("SBQ_remisiones")
 }
 
@@ -1453,7 +1398,6 @@ model BackofficeUser {
   BackofficeUserRole    BackofficeUserRole[]
   //BackofficeUserPermissions BackofficeUserPermissions[]
   Status                BackofficeUserStatus    @default(ACTIVE)
-
   @@map("DLPY_backoffice_user")
 }
 
@@ -1466,7 +1410,6 @@ model BackofficeUserDetails {
   organizationUuid   String?
   createdAt          DateTime                   @default(now())
   updatedAt          DateTime                   @updatedAt
-
   @@map("DLPY_backoffice_user_details")
 }
 
@@ -1478,7 +1421,6 @@ model BackofficeUserRole {
   organizationUuid   String?
   createdAt          DateTime               @default(now())
   updatedAt          DateTime               @updatedAt
-
   @@map("DLPY_backoffice_user_role")
 }
 
@@ -1493,7 +1435,6 @@ model Brand {
   organizationUuid  String?
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
-
   @@map("SBQ_brand")
 }
 
@@ -1506,7 +1447,6 @@ model BrandOrganization {
   organizationUuid  String?
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
-
   @@map("SBQ_brand_organization")
 }
 
@@ -1519,7 +1459,6 @@ model BrandSupplier {
   organizationUuid String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
-
   @@map("SBQ_brand_supplier")
 }
 
@@ -1532,27 +1471,26 @@ model BrandProduct {
   organizationUuid String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
-
   @@unique([brandUuid, product_uuid])
   @@map("SBQ_brand_product")
 }
 
 model Metas {
-  uuid                  String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  uuid                  String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name                  String
   time                  DateTime
-  amount                Int?
+  amount                BigInt?              @default(0) @db.BigInt
   clientes              Int?
   sells                 Int?
   buys                  Int?
   shippings             Int?
-  status                MetasStatus  @default(ACTIVE)
-  createdBy             String       @db.Uuid
-  createdByInternalUser InternalUser @relation(fields: [createdBy], references: [uuid])
+  statusProceso         STATUS_PROCESO_METAS @default(EN_PROCESO)
+  status                MetasStatus          @default(ACTIVE)
+  createdBy             String               @db.Uuid
+  createdByInternalUser InternalUser         @relation(fields: [createdBy], references: [uuid])
   organizationUuid      String?
-  createdAt             DateTime     @default(now())
-  updatedAt             DateTime     @updatedAt
-
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
   @@map("SBQ_metas")
 }
 
@@ -1564,7 +1502,6 @@ model LogHistory {
   organization      Organization @relation(fields: [organization_uuid], references: [uuid])
   organization_uuid String       @db.Uuid
   createdAt         DateTime     @default(now())
-
   @@map("SBQ_log_history")
 }
 
@@ -1588,7 +1525,6 @@ model Wordpress {
   pos_uuid                    String?       @db.Uuid
   createdAt                   DateTime      @default(now())
   updatedAt                   DateTime      @updatedAt
-
   @@map("SBQ_wordpress")
 }
 
@@ -1601,7 +1537,6 @@ model BulkinEvents {
   createdAt             DateTime                @default(now())
   updatedAt             DateTime                @updatedAt
   BulkingEventsFailures BulkingEventsFailures[]
-
   @@map("SBQ_bulking_events")
 }
 
@@ -1612,7 +1547,6 @@ model BulkingEventsFailures {
   position         Int
   log              String
   createdAt        DateTime      @default(now())
-
   @@map("SBQ_bulking_events_failure")
 }
 
@@ -1641,7 +1575,6 @@ model ConfigInvoice {
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
   BaseInvoice           BaseInvoice[]
-
   @@map("SBQ_config_invoice")
 }
 
@@ -1655,7 +1588,6 @@ model InvoiceDesign {
   styles                InvoiceDesignStyles[]
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
-
   @@map("SBQ_invoice_design")
 }
 
@@ -1667,7 +1599,6 @@ model InvoiceDesignStyles {
   value             String
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
-
   @@map("SBQ_invoice_design_styles")
 }
 
@@ -1697,7 +1628,6 @@ model InvoiceDesignStyles {
 enum BackofficeUserRoleType {
   ADMIN
   USER
-
   @@map("DLPY_backoffice_user_role_type")
 }
 
@@ -1705,7 +1635,6 @@ enum BackofficeUserDocumentType {
   CC
   CE
   PASSPORT
-
   @@map("DLPY_BACKOFFICE_USER_DOCUMENT_TYPE")
 }
 
@@ -1721,14 +1650,12 @@ enum BackfficePermissions {
   MANAGE_ORDERS
   VIEW_STATS
   VIEW_ORDER_HISTORY
-
   @@map("DLPY_BACKOFFICE_PERMISSIONS")
 }
 
 enum BackofficeUserStatus {
   ACTIVE
   INACTIVE
-
   @@map("DLPY_backoffice_user_status")
 }
 
@@ -2052,6 +1979,9 @@ enum BULKING_TYPE_EVENT {
   PURCHASE_INVOICE
   SELL_INVOICE
   CUSTOMERS
+  NOTA_CREDITO
+  CATEGORIAS
+  MARCAS
 }
 
 enum TYPEINVOICE {
@@ -2078,4 +2008,11 @@ enum STATUSCOBROFACTURA {
   POR_COBRAR
   ANULADA
   BORRADOR
+}
+
+enum STATUS_PROCESO_METAS {
+  COMPLETADA
+  INCOMPLETA
+  EN_PROCESO
+  FINALIZADA
 }

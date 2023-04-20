@@ -7,6 +7,7 @@ export interface ItemsPurchase {
   descuento: string;
   impuesto: string;
   total: number;
+  BodegaUuid?: string;
 }
 
 export interface PurchaseInvoice {
@@ -18,6 +19,7 @@ export interface PurchaseInvoice {
   Total: any;
   Por_Pagar: any;
   Adjunto_1: any;
+  Adjunto_2: any;
   Valor_recibido: any;
   Primer_Subtotal: any;
   Descuento_Total: any;
@@ -43,6 +45,7 @@ export function transformJSON(json: any[]): PurchaseInvoice[] {
         Total: row["Total"],
         Por_Pagar: row["Por Pagar"],
         Adjunto_1: row["Adjunto 1"],
+        Adjunto_2: row["Adjunto 2"],
         Valor_recibido: row["Valor recibido"],
         Primer_Subtotal: row["Primer Subtotal"],
         Descuento_Total: row["Descuento Total"],

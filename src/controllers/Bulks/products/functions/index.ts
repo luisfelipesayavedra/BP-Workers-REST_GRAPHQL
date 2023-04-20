@@ -4,6 +4,7 @@ export interface warehouse {
     uuid?: string
 }
 export interface ProductsFromExcel {
+    uuid?: string
     name: string,
    	Codigo:	number,
     sku: string,

@@ -64,7 +64,6 @@ export const sellInvoice = async () => {
             }) 
 
             const parsedDni = parseDni(String(data[index].Numero_de_Identificacion))
-            console.log("DNI: ",  parsedDni)
             const customer = await prisma.customer.findFirst({
                 where: {
                     DNI: parsedDni,
@@ -78,74 +77,77 @@ export const sellInvoice = async () => {
 
             const dateExpedition = new Date(parseDatetime(data[index].Fecha_de_Creacion)) 
             const dateExpiration = new Date(parseDatetime(data[index].Fecha_de_Vencimiento))
-            console.log(dateExpedition, dateExpiration)
-
-            const baseInvoice = await prisma.baseInvoice.create({
-                data: {
-                    title: "",
-                    styles: "",
-                    web: "",
-                    address: "",
-                    dateExpedition: dateExpedition,
-                    dateExpiration: dateExpiration,
-                    discount: parseInt(String(parseFloat(data[index].Valor_de_Descuento.replace(/[^0-9.-]+/g,"")) * 100)),
-                    email: "",
-                    footer: "",
-                    description: "",
-                    key: "",
-                    nit: "",
-                    total: parseInt(String(parseFloat(data[index].Total.replace(/[^0-9.-]+/g,""))* 100)),
-                    organizationUuid: event.organization_uuid!,
-                    resolution: data[index].Numero_de_Factura,
-                    subtotal: parseInt(String(parseFloat(data[index].Subtotal.replace(/[^0-9.-]+/g,""))* 100)),
-                    tax: 19,
-                    totalTax: parseInt(String(parseFloat(data[index].Valor_de_IVA.replace(/[^0-9.-]+/g,""))* 100)),
-                    type_document: "FACTURA",
-                    taxporcentage: 19.00,
-                    type_invoice: "VENTA",
-                }
-            })
-            await prisma.sell.create({
-                data: {
-                    CustomerSell: {
-                        create: {
-                            customerUuid: customer!.uuid
-                        }
-                    },
-                    discount: parseInt(String(parseFloat(data[index].Valor_de_Descuento.replace(/[^0-9.-]+/g,""))* 100)),
-                    SubproductSell: {
-                        createMany: {
-                            data: data[index].items.map((item) => {
-                                return {
-                                    productUuid: item.uuid
-                                }
-                            })
-                        }
-                    },
-                    organizationUuid: event.organization_uuid,
-                    SellBaseInvoice: {
-                        create: {
-                            data: data[index]!.Url_Factura_PDF,
-                            isExternal: true,
+            const transaction = async () => {
+                return await prisma.$transaction(async (prisma) => {
+                    const baseInvoice = await prisma.baseInvoice.create({
+                        data: {
+                            title: "",
+                            styles: "",
+                            web: "",
+                            address: "",
+                            dateExpedition: dateExpedition,
+                            dateExpiration: dateExpiration,
+                            discount: parseInt(String(parseFloat(data[index].Valor_de_Descuento.replace(/[^0-9.-]+/g,"")) * 100)),
+                            email: "",
+                            footer: "",
+                            description: "",
+                            key: "",
+                            nit: "",
+                            total: parseInt(String(parseFloat(data[index].Total.replace(/[^0-9.-]+/g,""))* 100)),
                             organizationUuid: event.organization_uuid!,
-                            number: data[index].Numero_de_Factura,
-                            customerUuid: customer.uuid,
-                            statusCobro: parseStatusCobro(data[index].Status_de_la_Factura),
-                            baseInvoiceUuid: baseInvoice.uuid,
+                            resolution: data[index].Numero_de_Factura,
+                            subtotal: parseInt(String(parseFloat(data[index].Subtotal.replace(/[^0-9.-]+/g,""))* 100)),
+                            tax: 19,
+                            totalTax: parseInt(String(parseFloat(data[index].Valor_de_IVA.replace(/[^0-9.-]+/g,""))* 100)) || 0,
+                            type_document: "FACTURA",
+                            taxporcentage: 19.00,
+                            type_invoice: "VENTA",
                         }
-                    }
-                }
-            })
-
-            const updateEvent = await prisma.bulkinEvents.update({
-                where: {
-                    uuid: event.uuid
-                },
-                data: {
-                    percentage: (index / data.length) * 100
-                }
-            })
-            console.log(updateEvent.percentage)
+                    })
+                    const sell = await prisma.sell.create({
+                        data: {
+                            CustomerSell: {
+                                create: {
+                                    customerUuid: customer!.uuid
+                                }
+                            },
+                            discount: parseInt(String(parseFloat(data[index].Valor_de_Descuento.replace(/[^0-9.-]+/g,""))* 100)),
+                            SubproductSell: {
+                                createMany: {
+                                    data: data[index].items.map((item) => {
+                                        return {
+                                            productUuid: item.uuid
+                                        }
+                                    })
+                                }
+                            },
+                            organizationUuid: event.organization_uuid,
+                            SellBaseInvoice: {
+                                create: {
+                                    data: data[index]!.Url_Factura_PDF,
+                                    isExternal: true,
+                                    organizationUuid: event.organization_uuid!,
+                                    number: data[index].Numero_de_Factura,
+                                    customerUuid: customer.uuid,
+                                    statusCobro: parseStatusCobro(data[index].Status_de_la_Factura),
+                                    baseInvoiceUuid: baseInvoice.uuid,
+                                }
+                            }
+                        }
+                    })
+        
+                    const updateEvent = await prisma.bulkinEvents.update({
+                        where: {
+                            uuid: event.uuid
+                        },
+                        data: {
+                            percentage: (index / data.length) * 100
+                        }
+                    })
+                    console.log(updateEvent.percentage, sell.uuid, baseInvoice.uuid)
+                })
+            }
+            transaction()
         }catch(error) {
             console.log(error)
             await prisma.bulkingEventsFailures.create({
@@ -158,10 +160,10 @@ export const sellInvoice = async () => {
         }
     }
     fs.writeFile("./src/Api/controllers/Bulks/sellInvoice/logger/notfoundItems.json", JSON.stringify(notfoundItems), "utf-8", () => {
-        console.log("data saved with errors: " + notfoundItems.length + "of " + data.length)
+        console.log("data saved with errors: " + notfoundItems.length + " of " + data.length)
     })
     fs.writeFile("./src/Api/controllers/Bulks/sellInvoice/logger/notfoundCustomers.json", JSON.stringify(notfoundCustomers), "utf-8", () => {
-        console.log("data saved with errors: " + notfoundCustomers.length + "of " + data.length)
+        console.log("data saved with errors: " + notfoundCustomers.length + " of " + data.length)
     })
     parentPort?.close()
     prisma.$disconnect()

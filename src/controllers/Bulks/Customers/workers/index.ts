@@ -10,15 +10,18 @@ export const Customer = async () => {
     const data = workerData.params.data.dataParsed as customerExcel[]
     console.log(event)
     for (let index = 0; index < data.length - 1; index++) {
+        // if (index <= 3499) {
+        //     continue
+        // }
         try {
             const customerData = data[index]
-
             const admin = await prisma.internalUser.findFirst({
                 where: {
                     organizationUuid: event.organization_uuid,
+                    email: "agudelocjuan@gmail.com",
                     user_role: {
                         type: {
-                            equals: "SUPER_ADMINISTRATOR"
+                            equals: "SUPERUSER"
                         }
                     }
                 }
