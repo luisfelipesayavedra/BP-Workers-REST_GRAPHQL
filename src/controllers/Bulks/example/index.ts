@@ -5,7 +5,7 @@ import { PubSub } from "graphql-subscriptions";
 import { PrismaClient } from "../../../generated/client";
 import { Payload } from "../../../middlewares";
 
-export const Customers = async (req: Request, res: Response) => {
+export const BpExample = async (req: Request, res: Response) => {
   try {
     const pubSub: PubSub = req.app.get("pubSub")
     const prisma: PrismaClient = req.app.get("prisma")
