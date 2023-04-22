@@ -61,7 +61,7 @@ export const ValidateAndDecryptTokenBase = async (
   try {
     const { authorization } = req.headers;
     console.log(authorization)
-    jwt.verify(String(authorization), "String(process.env.KEYPRIVATE)");
+    jwt.verify(String(authorization), String(process.env.KEYPRIVATE));
     const decoded = jwt.decode(String(authorization));
     const decodedInfo = _DecryptInternalData(decoded);
     req.body.payload = decodedInfo as Payload
