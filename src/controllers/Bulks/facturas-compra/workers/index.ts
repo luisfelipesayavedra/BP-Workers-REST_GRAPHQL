@@ -3,6 +3,7 @@ import {
   BulkinEvents,
   BuyBaseInvoice,
   PrismaClient,
+  Purchase,
 } from "../../../../generated/client";
 import { invoicePurchaseExcel } from "../functions";
 
@@ -14,8 +15,9 @@ export const InvoicePurchase = async () => {
   const data = workerData.params.data.dataParsed as invoicePurchaseExcel[];
   console.log(event);
 
-  const invoicePastCode = [];
- 
+  let invoicePastCode = ["0"];
+  let uuidPurchase: any[] = [];
+  console.log("uuidPurchase", uuidPurchase);
   for (let index = 0; index < data.length - 1; index++) {
     // if (index <= 3499) {
     //     continue
@@ -23,10 +25,10 @@ export const InvoicePurchase = async () => {
     //console.log("invoicePastCode",invoicePastCode[invoicePastCode.length - 1])
     try {
       const invoicePurchaseData = data[index];
-      console.log(invoicePurchaseData)
-      const invoiceCodigo = invoicePurchaseData.codigo
+      //console.log(invoicePurchaseData)
+      const invoiceCodigo = invoicePurchaseData.codigo;
       //console.log("invoiceCodigo",invoiceCodigo)
-      invoicePastCode.push(invoiceCodigo);
+      //invoicePastCode.push(invoiceCodigo);
 
       const bodega = await prisma.warehouse.findFirst({
         where: {
@@ -36,8 +38,6 @@ export const InvoicePurchase = async () => {
           uuid: true,
         },
       });
-      
-     
 
       const proveedor = await prisma.supplier.findFirst({
         where: {
@@ -48,43 +48,54 @@ export const InvoicePurchase = async () => {
         },
       });
 
-    
-
       const producto = await prisma.product.findFirst({
         where: {
-          SKU: invoicePurchaseData.producto_referencia.toString()
-        },
-        select:{
-          uuid: true
-        }
-      })
-
-     
-
-      const admin = await prisma.internalUser.findFirst({
-        where: {
-          organizationUuid: event.organization_uuid,
-          email: "agudelocjuan@gmail.com",
-          user_role: {
-            type: {
-              equals: "SUPERUSER",
+          OR: [
+            {
+              SKU: String(invoicePurchaseData.producto_referencia),
             },
-          },
+            {
+              name: invoicePurchaseData.producto_nombre,
+            },
+          ],
+        },
+        select: {
+          uuid: true,
         },
       });
 
-      const uuidPurchase: string[] = [];
+      let fechaEmisionISO8601 = "";
+     if(String(invoicePurchaseData.fecha_de_emision).includes("/") ){
 
-      if (invoicePurchaseData.codigo !== invoicePastCode[invoicePastCode.length - 1]) {
+      const fechaEmision = invoicePurchaseData.fecha_de_emision;
+      const partesFecha = fechaEmision.split("/"); // Divide la cadena por "/"
+      const dia = partesFecha[0]; // Obtiene el día
+      const mes = partesFecha[1]; // Obtiene el mes
+      const anio = partesFecha[2]; // Obtiene el año
+
+      // Paso 2: Crear un objeto Date con los valores de día, mes y año en formato ISO 8601
+      fechaEmisionISO8601 = `${anio}-${mes}-${dia}T00:00:00Z`; // Formato ISO 8601
+     }else{
+      fechaEmisionISO8601 = invoicePurchaseData.fecha_de_emision;
+     }
+      
+
+      if (
+        invoicePurchaseData.codigo !==
+        invoicePastCode[invoicePastCode.length - 1]
+      ) {
         const purchase = await prisma.purchase.create({
           data: {
-            createdAt: invoicePurchaseData.fecha_de_emision,
-            subtotal: BigInt(invoicePurchaseData.factura_subtotal),
-            total: BigInt(invoicePurchaseData.factura_total),
+            createdAt: new Date(fechaEmisionISO8601),
+            subtotal: BigInt(
+              invoicePurchaseData.factura_subtotal.replace(",", "")
+            ),
+            total: BigInt(invoicePurchaseData.factura_total.replace(",", "")),
+            purchaseStatus: "COMPLETED",
             organizationUuid: event.organization_uuid ?? "",
             totalTax:
-              BigInt(invoicePurchaseData.factura_total_retencion_1) +
-              BigInt(invoicePurchaseData.factura_total_retencion_2),
+              BigInt(invoicePurchaseData.factura_total_retencion_1 ?? 0) +
+              BigInt(invoicePurchaseData.factura_total_retencion_2 ?? 0),
             SupplierPurcahse: {
               create: {
                 supplierUuid: proveedor?.uuid ?? "",
@@ -93,46 +104,74 @@ export const InvoicePurchase = async () => {
             SubproductPurchase: {
               create: {
                 organizationUuid: event.organization_uuid ?? "",
-                quantity: parseInt(invoicePurchaseData.producto_cantidad) ?? 0,
+                quantity:
+                  parseFloat(
+                    invoicePurchaseData.producto_cantidad.replace(",", ".")
+                  ) ?? 0,
                 productUuid: producto?.uuid,
-                UpcomingPurchase: {
+                /* UpcomingPurchase: {
                   create: {
                     organizationUuid: event.organization_uuid ?? "",
                     subQuantity:
-                      parseInt(invoicePurchaseData.producto_cantidad) ?? 0,
+                      parseFloat(
+                        invoicePurchaseData.producto_cantidad.replace(",", ".")
+                      ) ?? 0,
                     warehouse_uuid: bodega?.uuid ?? "",
+                    createdAt: new Date(fechaEmisionISO8601),
                   },
-                },
+                }, */
               },
             },
           },
-          select: {
-            uuid: true,
+          include: {
+            SubproductPurchase: {
+              include: {
+                UpcomingPurchase: true,
+              },
+            },
+          },
+        });
+
+        uuidPurchase.push(purchase.uuid);
+
+        await prisma.upcomingPurchase.create({
+          data: {
+            organizationUuid: event.organization_uuid ?? "",
+            subQuantity:
+              parseFloat(
+                invoicePurchaseData.producto_cantidad.replace(",", ".")
+              ) ?? 0,
+            warehouse_uuid: bodega?.uuid ?? "",
+            purchaseUuid: purchase.uuid,
+            createdAt: new Date(fechaEmisionISO8601),
+            subProductPurchaseUuid: purchase.SubproductPurchase[0].uuid,
           },
         });
 
         const baseinvoice = await prisma.baseInvoice.create({
           data: {
-            address: invoicePurchaseData.direccion_proveedor,
-            dateExpedition: invoicePurchaseData.fecha_de_emision,
+            address: invoicePurchaseData.direccion_proveedor ?? "",
+            dateExpedition: new Date(fechaEmisionISO8601),
             dateExpiration: invoicePurchaseData.vencimiento,
-            description: invoicePurchaseData.description,
+            description: invoicePurchaseData.description ?? "",
             organizationUuid: event.organization_uuid ?? "",
             title: "Factura Compra",
             footer: "Gracias por su compra",
-            createdAt: invoicePurchaseData.fecha_de_emision,
-            total: BigInt(invoicePurchaseData.factura_total),
-            subtotal: BigInt(invoicePurchaseData.factura_subtotal),
+            createdAt: new Date(fechaEmisionISO8601),
+            total: BigInt(invoicePurchaseData.factura_total.replace(",", "")),
+            subtotal: BigInt(
+              invoicePurchaseData.factura_subtotal.replace(",", "")
+            ),
             type_document: "FACTURA",
             type_invoice: "COMPRA",
             totalTax:
               BigInt(invoicePurchaseData.factura_total_retencion_1) +
-              BigInt(invoicePurchaseData.factura_total_retencion_2),
+              BigInt(invoicePurchaseData.factura_total_retencion_2 ?? 0),
             saldoPorPagar:
               (invoicePurchaseData.estado === "Por pagar"
-                ? BigInt(invoicePurchaseData.factura_total)
+                ? BigInt(invoicePurchaseData.factura_total.replace(",", "."))
                 : 0) ?? 0,
-            nit: invoicePurchaseData.identificacion_proveedor,
+            nit: String(invoicePurchaseData.identificacion_proveedor),
             key: invoicePurchaseData.codigo,
             styles: "",
             discount: 0,
@@ -141,7 +180,7 @@ export const InvoicePurchase = async () => {
             web: "",
             tax:
               BigInt(invoicePurchaseData.factura_total_retencion_1) +
-              BigInt(invoicePurchaseData.factura_total_retencion_2),
+              BigInt(invoicePurchaseData.factura_total_retencion_2 ?? 0),
             taxporcentage: 0,
           },
           select: {
@@ -149,60 +188,51 @@ export const InvoicePurchase = async () => {
           },
         });
 
-        const buyInvoicePurchase = await prisma.buyBaseInvoice.create({
+        await prisma.buyBaseInvoice.create({
           data: {
-            uuid: "",
-            createdAt: new Date(invoicePurchaseData?.fecha_de_emision),
+            createdAt: new Date(fechaEmisionISO8601),
             organizationUuid: event.organization_uuid ?? "",
             isExternal: true,
-            PurchaseUuid: purchase?.uuid ?? "",
-            baseInvoiceUuid: baseinvoice?.uuid ?? "",
+            PurchaseUuid: purchase?.uuid,
+            baseInvoiceUuid: baseinvoice?.uuid,
             data: invoicePurchaseData?.description ?? "",
             SupplierUuid: proveedor?.uuid ?? "",
             fechaDeVencimiento: new Date(invoicePurchaseData?.vencimiento),
             description: invoicePurchaseData?.description ?? "",
             pref: "",
             number: invoicePurchaseData?.codigo ?? "",
-            Supplier: {
-              connect:
-                {
-                  uuid: proveedor?.uuid ?? "",
-                } ?? "",
-            },
             pagado:
               (invoicePurchaseData.estado === "Pagado"
-                ? BigInt(invoicePurchaseData.factura_total)
+                ? BigInt(invoicePurchaseData.factura_total.replace(",", ""))
                 : 0) ?? 0,
             PorPagar:
               (invoicePurchaseData.estado === "Por pagar"
-                ? BigInt(invoicePurchaseData.factura_total)
+                ? BigInt(invoicePurchaseData.factura_total.replace(",", ""))
                 : 0) ?? 0,
           } as BuyBaseInvoice,
         });
-
-        uuidPurchase.push(purchase.uuid);
-       
       } else {
-        const uuidSearch = await prisma.purchase.findFirst({
+        console.log("uuidPurchase", uuidPurchase[uuidPurchase.length - 1]);
+        const purchaseUpsert = await prisma.purchase.upsert({
           where: {
             uuid: uuidPurchase[uuidPurchase.length - 1],
-          },
-        });
-        await prisma.purchase.upsert({
-          where: {
-            uuid: uuidSearch?.uuid,
           },
           create: {
             SubproductPurchase: {
               create: {
                 organizationUuid: event.organization_uuid ?? "",
-                quantity: parseInt(invoicePurchaseData.producto_cantidad) ?? 0,
+                quantity:
+                  parseFloat(
+                    invoicePurchaseData.producto_cantidad.replace(",", ".")
+                  ) ?? 0,
                 productUuid: producto?.uuid,
                 UpcomingPurchase: {
                   create: {
-                    organizationUuid: event.organization_uuid ?? "",
+                    organizationUuid: event?.organization_uuid ?? "",
+                    purchaseUuid: uuidPurchase[uuidPurchase.length - 1],
+                    createdAt: new Date(fechaEmisionISO8601),
                     subQuantity:
-                      parseInt(invoicePurchaseData.producto_cantidad) ?? 0,
+                      parseInt(invoicePurchaseData?.producto_cantidad) ?? 0,
                     warehouse_uuid: bodega?.uuid ?? "",
                   },
                 },
@@ -213,12 +243,60 @@ export const InvoicePurchase = async () => {
             SubproductPurchase: {
               create: {
                 organizationUuid: event.organization_uuid ?? "",
+                quantity:
+                  parseFloat(
+                    invoicePurchaseData.producto_cantidad.replace(",", ".")
+                  ) ?? 0,
+                productUuid: producto?.uuid,
+                UpcomingPurchase: {
+                  create: {
+                    organizationUuid: event?.organization_uuid ?? "",
+                    purchaseUuid: uuidPurchase[uuidPurchase.length - 1],
+                    createdAt: new Date(fechaEmisionISO8601),
+                    subQuantity:
+                      parseInt(invoicePurchaseData?.producto_cantidad) ?? 0,
+                    warehouse_uuid: bodega?.uuid ?? "",
+                  },
+                },
               },
             },
           },
+          include: {
+            SubproductPurchase: {
+              include: {
+                UpcomingPurchase: true,
+              },
+            },
+            UpcomingPurchase: true,
+          },
         });
-      }
 
+        /*  await prisma.upcomingPurchase.create({
+          data: {
+            organizationUuid: event.organization_uuid ?? "",
+            subQuantity:
+              parseFloat(
+                invoicePurchaseData.producto_cantidad.replace(",", ".")
+              ) ?? 0,
+            warehouse_uuid: bodega?.uuid ?? "",
+            purchaseUuid: purchaseUpsert.uuid,
+            createdAt: new Date(fechaEmisionISO8601),
+            subProductPurchaseUuid: purchaseUpsert.SubproductPurchase[0].uuid,
+          }, */
+        /* update: {
+            organizationUuid: event.organization_uuid ?? "",
+            subQuantity:
+              parseFloat(
+                invoicePurchaseData.producto_cantidad.replace(",", ".")
+              ) ?? 0,
+            warehouse_uuid: bodega?.uuid ?? "",
+            purchaseUuid: purchaseUpsert.uuid,
+            createdAt: new Date(fechaEmisionISO8601),
+            subProductPurchaseUuid: purchaseUpsert.SubproductPurchase[0].uuid,
+          } */
+        //});
+      }
+      invoicePastCode.push(invoiceCodigo);
       const eventData = await prisma.bulkinEvents.update({
         where: {
           uuid: event.uuid,

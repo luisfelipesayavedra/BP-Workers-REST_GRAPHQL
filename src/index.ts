@@ -13,7 +13,7 @@ import { PrismaClient } from "./generated/client";
 import fileUpload from "express-fileupload";
 export const pubSub = new PubSub();
 const prisma = new PrismaClient();
-export const startServer = async (options = { port: 4000 }) => {
+export const startServer = async (options = { port: 4100 }) => {
   try {
     const { port } = options;
     const app = express();
