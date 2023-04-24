@@ -4,19 +4,21 @@ import { Worker } from "worker_threads";
 import { PubSub } from "graphql-subscriptions";
 import { PrismaClient } from "../../../generated/client";
 import { Payload } from "../../../middlewares";
+import { transformJSON } from "./functions";
 
-export const BpExample = async (req: Request, res: Response) => {
+export const sellInvoice = async (req: Request, res: Response) => {
   try {
     const pubSub: PubSub = req.app.get("pubSub")
     const prisma: PrismaClient = req.app.get("prisma")
     const {organizationUuid} = req.body.payload as Payload 
     const tmp = req.files?.excel;
+    console.log(organizationUuid)
     
     const newEvent = await prisma.bulkinEvents.create({
         data: {
             organization_uuid: organizationUuid,
             percentage: 0,
-            type: "CUSTOMERS"
+            type: "SELL_INVOICE"
         }
     })
     const bufferToJson = excelToJson({
@@ -72,25 +74,26 @@ export const BpExample = async (req: Request, res: Response) => {
         ["AR"]: "ESTADO DE RETENCIÓN"
         }        
     });
-    const dataParsed = bufferToJson["Worksheet"]
-    // const processWorker = new Worker(
-    //   "./src/controllers/Bulks/Customers/workers/worker.import.js",
-    //   {
-    //     workerData: {
-    //       path: "./index.ts",
-    //       params: {
-    //         data: {
-    //             dataParsed,
-    //             newEvent
-    //         },
-    //       },
-    //     },
-    //   }
-    // );
-    // processWorker.on("message", (data) => {
-    //     data
-    //     pubSub.publish(`event_worker: ${newEvent.uuid}`, {})
-    // })
+    const dataParsed = transformJSON(bufferToJson["facturasAllegra"])
+
+    const processWorker = new Worker(
+      "./src/controllers/Bulks/sellInvoice/workers/worker.import.js",
+      {
+        workerData: {
+          path: "./index.ts",
+          params: {
+            data: {
+                dataParsed,
+                newEvent
+            },
+          },
+        },
+      }
+    );
+    processWorker.on("message", (data) => {
+        data
+        pubSub.publish(`event_worker: ${newEvent.uuid}`, {})
+    })
     return res.send({...dataParsed});
   } catch (error) {
     console.error(error);
