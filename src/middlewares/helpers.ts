@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import CryptoJS from "crypto-js";
+import bcrypt from 'bcryptjs';
 
 const _EncryptInternalData = (data: any) => {
   try {
@@ -33,6 +34,16 @@ export const GenerateToken = (data: any) => {
     return token;
   } catch (error) {
     throw new Error("Error generating token: " + error);
+  }
+};
+
+export const encryptPassword = (password: any) => {
+  try {
+    const salt = bcrypt.genSaltSync(10);
+    const hash = bcrypt.hashSync(password, salt);
+    return hash;
+  } catch (error) {
+    throw error;
   }
 };
 
