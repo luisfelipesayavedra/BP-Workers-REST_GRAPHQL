@@ -9,7 +9,7 @@ export const BpInvoicePurchase = async (req: Request, res: Response) => {
   try {
     const pubSub: PubSub = req.app.get("pubSub")
     const prisma: PrismaClient = req.app.get("prisma")
-    const organizationUuid = "00a35cfb-78be-44d1-87d3-20e762671985"//req.body.payload as Payload 
+    const organizationUuid = "c0517e80-ab0d-41e9-b23d-44783c187820"//req.body.payload as Payload 
     const tmp = req.files?.excel;
     
     const newEvent = await prisma.bulkinEvents.create({
