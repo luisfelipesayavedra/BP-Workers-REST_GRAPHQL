@@ -5,7 +5,7 @@ import { PubSub } from "graphql-subscriptions";
 import { PrismaClient } from "../../../generated/client";
 import { Payload } from "../../../middlewares";
 
-export const BpExample = async (req: Request, res: Response) => {
+export const BpCustomer = async (req: Request, res: Response) => {
   try {
     const pubSub: PubSub = req.app.get("pubSub")
     const prisma: PrismaClient = req.app.get("prisma")
@@ -25,29 +25,38 @@ export const BpExample = async (req: Request, res: Response) => {
       header: {
         rows: 1,
       },
+      
       columnToKey: {
-        ["A"]: "id",
-        ["B"]: "firstName",
-        ["C"]: "lastName",
-        ["D"]: "localCreation",
-        ["E"]: "birthDate",
-        ["F"]: "email",
-        ["G"]: "DNI",
-        ["H"]: "gender",
-        ["I"]: "phone",
-        ["J"]: "profileImg",
-        ["K"]: "typeDoc",
-        ["L"]: "country",
-        ["M"]: "state",
-        ["N"]: "city",
-        ["O"]: "address",
-        ["P"]: "instagram",
-        ["Q"]: "sendEmail",
+        ["A"]: "Tipo de contacto",
+        ["B"]: "Nombre",
+        ["C"]: "Segundo_nombre",
+        ["D"]: "Primer_apellido",
+        ["E"]: "Segundo_apellido",
+        ["F"]: "Tipo_de_identificación",
+        ["G"]: "Identificación",
+        ["H"]: "Dígito_de_verificación",
+        ["I"]: "Tipo_de_persona",
+        ["J"]: "Responsabilidad_tributaria",
+        ["K"]: "Teléfono_1",
+        ["L"]: "Teléfono_2",
+        ["M"]: "Celular",
+        ["N"]: "País",
+        ["O"]: "Departamento",
+        ["P"]: "Municipio",
+        ["Q"]: "Dirección",
+        ["R"]: "Código_postal",
+        ["S"]: "Correo",
+        ["T"]: "Lista_de_precios",
+        ["U"]: "Vendedor",
+        ["V"]: "Plazo_de_pago",
+        ["W"]: "Cuentas_por_cobrar",
+        ["X"]: "Cuentas_por_pagar",
         }
     });
-    const dataParsed = bufferToJson["Worksheet"]
+    console.log(bufferToJson)
+    const dataParsed = bufferToJson["Sheet1"]
     const processWorker = new Worker(
-      "./src/controllers/Bulks/Customers/workers/worker.import.js",
+      "./src/controllers/Bulks/customer/workers/worker.import.js",
       {
         workerData: {
           path: "./index.ts",
