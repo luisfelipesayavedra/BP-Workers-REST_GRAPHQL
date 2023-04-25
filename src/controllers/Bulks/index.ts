@@ -1,3 +1,7 @@
 export * from './example'
+export * from './products'
+export * from './providers'
+export * from './sellInvoice'
 export * from './customer'
 export * from './facturas-compra'
+export * from './stock'
