@@ -6,7 +6,7 @@ const bulkRouter = Router();
 
 bulkRouter.post("/BP", [ValidateAndDecryptTokenBase], BpExample)
 bulkRouter.post("/customer",[ValidateAndDecryptTokenBase] , BpCustomer)
-bulkRouter.post("/facturas-compra", BpInvoicePurchase)
+bulkRouter.post("/facturas-compra", [ValidateAndDecryptTokenBase], BpInvoicePurchase)
 
 
 export default bulkRouter
