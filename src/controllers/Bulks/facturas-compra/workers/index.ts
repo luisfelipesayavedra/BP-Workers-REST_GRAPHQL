@@ -367,9 +367,14 @@ export const InvoicePurchase = async () => {
         },
       });
       console.log(eventData.percentage, invoicePurchaseData.codigo);
-    } catch (error) {
+    } catch (error: any) {
       console.log(error);
-      errorsLog.push(String(error))
+      errorsLog.push(
+        {
+          message: `Error creating invoice with the next id: ${data[index].codigo}`,
+          reason: error.message
+        }
+      );
       await prisma.bulkingEventsFailures.create({
         data: {
           log: `Error creating invoice with the next id: ${data[index].codigo}`,
