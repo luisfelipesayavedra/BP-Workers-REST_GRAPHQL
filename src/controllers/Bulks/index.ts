@@ -1,4 +1,5 @@
 export * from './example'
 export * from './providers'
+export * from './noteCredits'
 export * from './users'
 export * from './sku-product'
