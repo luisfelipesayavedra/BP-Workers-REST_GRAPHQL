@@ -33,9 +33,23 @@ export const Customer = async () => {
         },
       });
 
+      const vendedor = customerData?.Vendedor
+
+      const minuscula = vendedor.toLowerCase()
+
+      const namesArray = minuscula.split(" ")
+
       const sellers = await prisma.internalUser.findMany({
         where: {
           organizationUuid: event.organization_uuid,
+          first_name: {
+            contains: namesArray[0] ?? namesArray[1],
+            mode: "insensitive",
+          },
+          last_name: {
+            contains: namesArray[1] ?? namesArray[2] ?? namesArray[3],
+            mode: "insensitive",
+          }
         },
         select: {
           uuid: true,
@@ -43,13 +57,15 @@ export const Customer = async () => {
           last_name: true,
         }
       });
-      
-      const newObjSeller = sellers.find((seller) => {
-        const sellerName = {name:`${seller.first_name} ${seller.last_name}`, uuid: seller.uuid};
-        return sellerName.name === customerData.Vendedor
-      });
-  
 
+      /* const [{uuid}] = sellers
+      const uuidCreated = uuid === undefined ? admin?.uuid : uuid */
+     /*  const newObjSeller = sellers.find((seller) => {
+        const sellerName = {name:`${seller.first_name} ${seller.last_name}`, uuid: seller.uuid};
+        return sellerName.name.toLowerCase() === customerData.Vendedor.toLowerCase()
+      });
+   */
+   // console.log("newObjSeller", newObjSeller?.uuid);
       /*  const parseTypeDoc = (type: string) => {
         if(type === "Número de identificación tributaria"){
             return TYPE_DNI.NIT
@@ -68,16 +84,17 @@ export const Customer = async () => {
         }
       }
  */
-      const parsePhone = (phone: string) => {
-        if (customerData?.Teléfono_1 === "") {
-          return customerData?.Teléfono_2;
-        } else if (customerData?.Teléfono_2 === "") {
-          return customerData?.Celular;
+     /*  const parsePhone = () => {
+        if (String(customerData?.Teléfono_1) !== "") {
+          return String(customerData?.Teléfono_1);
+        } else if (String(customerData?.Teléfono_2) !== "") {
+          return String(customerData?.Teléfono_2);
+        } else if (String(customerData?.Celular) !== "") {
+          return String(customerData?.Celular);
         }
-        if (customerData?.Celular === "") {
-          return "";
-        }
-      };
+      }; */
+
+      //console.log("parsePhone", parsePhone());
       const parseTypeDoc: {
         [id: string]: TYPE_DNI;
       } = {
@@ -88,47 +105,53 @@ export const Customer = async () => {
         ["Pasaporte"]: TYPE_DNI.PP,
       };
 
-      const customer = await prisma.customer.create({
-        data: {
-          DNI: String(customerData.Identificación),
-          email: String(customerData.Correo) ?? "",
-          firstName: customerData.Nombre ?? "",
-          LastName: customerData.Primer_apellido ?? "",
-          birthDate: new Date(),
-          TypeDOC: parseTypeDoc[customerData.Tipo_de_identificación],
+      const customerDataBase = await prisma.customer.findFirst({
+        where: {
           organizationUuid: event.organization_uuid,
+          DNI: String(customerData.Identificación),
+        },
+        include: {
+          CustomerDetails: true,
+        }
+      });
+   //console.log("customerDataBase",customerDataBase)
+      const customer = await prisma.customer.update({
+        where: {
+          uuid: customerDataBase?.uuid ?? "",
+        },
+        data: {
+          //DNI: String(customerData.Identificación),
+          //email: String(customerData.Correo) ?? "",
+          //firstName: customerData.Nombre ?? "",
+          //LastName: customerData.Primer_apellido ?? "",
+          //birthDate: new Date(),
+          //TypeDOC: parseTypeDoc[customerData.Tipo_de_identificación],
+          //organizationUuid: event.organization_uuid,
           createdByInternalUser: {
             connect: {
-              uuid: newObjSeller?.uuid ?? admin?.uuid,
+              uuid: sellers[0]?.uuid ?? admin?.uuid,
             },
           },
-          createdAt: new Date(),
-          status: "ACTIVE",
-          NIT: String(customerData.Identificación),
-          DV: customerData.Dígito_de_verificación ?? "",
-          name: customerData.Nombre,
-          profileImg: "",
-          typePerson:
+          //createdAt: new Date(),
+          //status: "ACTIVE",
+          //NIT: String(customerData.Identificación),
+          //DV: customerData.Dígito_de_verificación ?? "",
+          //name: customerData.Nombre,
+          //profileImg: "",
+          /* typePerson:
             customerData.Tipo_de_identificación ===
             "Número de identificación tributaria"
               ? "JURIDICAL"
-              : "NATURAL",
+              : "NATURAL", */
           CustomerDetails: {
-            create: {
-              address: customerData.Dirección ?? "",
-              city: customerData.Municipio ?? "",
-              country: customerData.País ?? "",
-              phone:
-                (customerData?.Teléfono_1 !== ""
-                  ? customerData?.Teléfono_1
-                  : customerData?.Teléfono_2 !== ""
-                  ? customerData?.Teléfono_2
-                  : customerData?.Celular !== ""
-                  ? customerData?.Celular
-                  : "") ?? "",
-              state: customerData.Departamento ?? "",
-              birthDate: new Date(),
-              organizationUuid: event.organization_uuid,
+            update: {
+              //address: customerData.Dirección ?? "",
+              //city: customerData.Municipio ?? "",
+              //country: customerData.País ?? "",
+              phone: customerData?.Teléfono_1 ?? customerData?.Teléfono_2 ?? customerData?.Celular ?? "",
+              //state: customerData.Departamento ?? "",
+              //birthDate: new Date(),
+              //organizationUuid: event.organization_uuid,
             },
           },
         },
