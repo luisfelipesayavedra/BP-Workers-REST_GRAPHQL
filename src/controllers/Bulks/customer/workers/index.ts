@@ -153,6 +153,7 @@ export const Customer = async () => {
               //birthDate: new Date(),
               //organizationUuid: event.organization_uuid,
             },
+            
           },
         },
       });
