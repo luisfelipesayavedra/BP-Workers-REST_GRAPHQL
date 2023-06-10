@@ -14,46 +14,161 @@ export const CustomerPos = async () => {
   // console.log(event);
   // console.log(data);
 
-  let errors = [];
+  let errors: any[] = [];
   let succes = [];
 
-  for (let i = 0; i < data.length; i++) {
-    try {
-      const invoiceData = data[i];
+  const dataCustomerFilter = data.filter((item, index) => {
+    return (
+      data.indexOf(
+        data.find(
+          (e) =>
+            e.IDENTIFICACION_CLIENTE === item.IDENTIFICACION_CLIENTE &&
+            e.BODEGA === item.BODEGA
+        ) ?? ({} as SellInvoice)
+      ) === index
+    );
+  });
+  // const dataSellerFilter = data.filter((item, index) => {
+  //   return (
+  //     data.indexOf(
+  //       data.find(
+  //         (e) => e.VENDEDOR === item.VENDEDOR && e.BODEGA === item.BODEGA
+  //       ) ?? ({} as SellInvoice)
+  //     ) === index
+  //   );
+  // });
+  console.log('Customer pos uniques: ', dataCustomerFilter.length);
+  // console.log('Seller pos uniques: ', dataSellerFilter.length);
+  const pos = await prisma.pos.findMany({
+    where: {
+      organizationUuid: String(event.organization_uuid),
+    },
+  });
+  // for (let i = 0; i < dataSellerFilter.length; i++) {
+  //   try {
+  //     const invoiceDataSeller = dataSellerFilter[i];
 
-      const pos = await prisma.pos.findMany({
-        where: {
-          organizationUuid: String(event.organization_uuid),
-        },
-      });
+  //     const posUuidSeller = pos.find(
+  //       (p) => p.name.toLowerCase() == invoiceDataSeller.BODEGA.toLowerCase()
+  //     )?.uuid;
+
+  //     if (!posUuidSeller) {
+  //       const error = `Pos not found: ${invoiceDataSeller.BODEGA}`;
+  //       errors.push(error);
+  //       throw '';
+  //     }
+  //     // console.log(posUuid, invoiceData.BODEGA);
+
+  //     const vendedor = invoiceDataSeller.VENDEDOR;
+  //     if (!vendedor) throw '';
+  //     const minuscula = vendedor.toLowerCase();
+
+  //     const sellers = await prisma.internalUser.findMany({
+  //       where: {
+  //         organizationUuid: event.organization_uuid,
+  //       },
+  //       include: {
+  //         SellerPos: true,
+  //       },
+  //     });
+
+  //     const seller = sellers.find((seller) => {
+  //       return (
+  //         (minuscula.includes(String(seller.first_name).toLowerCase()) &&
+  //           minuscula.includes(String(seller.last_name).toLowerCase())) ||
+  //         (minuscula.includes(String(seller.first_name).toLowerCase()) &&
+  //           minuscula.includes(
+  //             String(seller.last_name.split(' ')[0]).toLowerCase()
+  //           )) ||
+  //         parseSellName(vendedor as string).includes(
+  //           parseSellName(seller.first_name + ' ' + seller.last_name)
+  //         )
+  //       );
+  //     });
+  //     // console.log('excel seller: ', invoiceData.VENDEDOR);
+  //     // console.log('db seller: ', seller?.first_name, seller?.last_name);
+  //     // console.log('excel customer: ', invoiceData.CLIENTE_NOMBRE);
+  //     // console.log('db customer: ', customer?.firstName, customer?.LastName);
+  //     if (!seller) {
+  //       const error = `Seller not found: ${vendedor}`;
+  //       errors.push(error);
+  //       throw '';
+  //     }
+
+  //     const validSellerPos = seller.SellerPos.find(
+  //       (c) => c.pos_uuid === posUuidSeller
+  //     );
+
+  //     if (!validSellerPos) {
+  //       await prisma.internalUser.update({
+  //         where: {
+  //           uuid: seller?.uuid ?? '',
+  //         },
+  //         data: {
+  //           SellerPos: {
+  //             create: {
+  //               pos: {
+  //                 connect: {
+  //                   uuid: posUuidSeller,
+  //                 },
+  //               },
+  //               organizationUuid: seller?.uuid,
+  //             },
+  //           },
+  //         },
+  //         include: {
+  //           SellerPos: true,
+  //         },
+  //       });
+  //       const messageSeller = `Seller update: ${invoiceDataSeller.VENDEDOR}`;
+  //       succes.push(messageSeller);
+  //       console.log(`Migrating Sellers: ${i + 1} of ${data.length}`);
+  //     } else {
+  //       console.log('SELLER ALREADY', invoiceDataSeller.VENDEDOR)
+  //     }
+  //     // console.log('cliente:',customerUpdate.CustomerPos);
+  //     // console.log('vendedor: ',sellerUpdate.SellerPos);
+  //   } catch (error) {
+  //     console.log(error);
+  //   } finally {
+  //     prisma.$disconnect();
+  //   }
+  // }
+  console.log('-----------------> SELLER POS READY <--------------------')
+  for (let j = 0; j < dataCustomerFilter.length; j++) {
+    try {
+      const invoiceDataCustomer = dataCustomerFilter[j];
 
       const customer = await prisma.customer.findFirst({
         where: {
-          DNI: String(invoiceData.IDENTIFICACION_CLIENTE),
+          DNI: String(invoiceDataCustomer.IDENTIFICACION_CLIENTE),
         },
         include: {
-          CustomerPos: true
-        }
+          CustomerPos: true,
+        },
       });
-      console.log(customer?.DNI, String(invoiceData.IDENTIFICACION_CLIENTE))
+      console.log(
+        customer?.DNI,
+        String(invoiceDataCustomer.IDENTIFICACION_CLIENTE)
+      );
       if (!customer) {
-        const error = `Customer not found: ${invoiceData.IDENTIFICACION_CLIENTE}`;
+        const error = `Customer not found: ${invoiceDataCustomer.IDENTIFICACION_CLIENTE}`;
         errors.push(error);
         throw '';
       }
 
-
-      const posUuid = pos.find(
-        (p) => p.name.toLowerCase() == invoiceData.BODEGA.toLowerCase()
+      const posUuidCustomer = pos.find(
+        (p) => p.name.toLowerCase() == invoiceDataCustomer.BODEGA.toLowerCase()
       )?.uuid;
 
-      if (!posUuid) {
-        const error = `Pos not found: ${invoiceData.BODEGA}`;
+      if (!posUuidCustomer) {
+        const error = `Pos not found: ${invoiceDataCustomer.BODEGA}`;
         errors.push(error);
         throw '';
       }
-      // console.log(posUuid, invoiceData.BODEGA);
-      const validCustomerPos = customer.CustomerPos.find(c => c.posUuid === posUuid);
+      const validCustomerPos = customer.CustomerPos.find(
+        (c) => c.posUuid === posUuidCustomer
+      );
 
       if (!validCustomerPos) {
         await prisma.customer.update({
@@ -65,7 +180,7 @@ export const CustomerPos = async () => {
               create: {
                 pos: {
                   connect: {
-                    uuid: posUuid,
+                    uuid: posUuidCustomer,
                   },
                 },
                 organizationUuid: customer?.uuid,
@@ -76,83 +191,20 @@ export const CustomerPos = async () => {
             CustomerPos: true,
           },
         });
-        const message = `Customer update: ${invoiceData.IDENTIFICACION_CLIENTE}`;
+        const message = `Customer update: ${invoiceDataCustomer.IDENTIFICACION_CLIENTE}`;
         succes.push(message);
-      }
-      const vendedor = invoiceData.VENDEDOR;
-      if(!vendedor) throw ''
-      const minuscula = vendedor.toLowerCase();
-
-      const sellers = await prisma.internalUser.findMany({
-        where: {
-          organizationUuid: event.organization_uuid,
-        },
-        include: {
-          SellerPos: true
-        }
-      });
-
-      const seller = sellers.find(
-        (seller) => {
-          return (
-            (minuscula.includes(String(seller.first_name).toLowerCase()) &&
-              minuscula.includes(String(seller.last_name).toLowerCase())) ||
-              (minuscula.includes(String(seller.first_name).toLowerCase()) &&
-              minuscula.includes(String(seller.last_name.split(' ')[0]).toLowerCase())) ||
-            parseSellName(vendedor as string).includes(
-              parseSellName(seller.first_name + ' ' + seller.last_name)
-            )
-          );
-        }
-      );
-      // console.log('excel seller: ', invoiceData.VENDEDOR);
-      // console.log('db seller: ', seller?.first_name, seller?.last_name);
-      // console.log('excel customer: ', invoiceData.CLIENTE_NOMBRE);
-      // console.log('db customer: ', customer?.firstName, customer?.LastName);
-      if (!seller) {
-        const error = `Seller not found: ${vendedor}`;
-        errors.push(error);
-        throw '';
-      }
-
-      const validSellerPos = seller.SellerPos.find(
-        (c) => c.pos_uuid === posUuid
-      );
-      
-      if (!validSellerPos) {
-        await prisma.internalUser.update({
-          where: {
-            uuid: seller?.uuid ?? '',
-          },
-          data: {
-            SellerPos: {
-              create: {
-                pos: {
-                  connect: {
-                    uuid: posUuid,
-                  },
-                },
-                organizationUuid: seller?.uuid,
-              },
-            },
-          },
-          include: {
-            SellerPos: true,
-          },
-        });
-        const messageSeller = `Seller update: ${invoiceData.VENDEDOR}`;
-        succes.push(messageSeller);
-        console.log(`Migrating: ${i + 1} of ${data.length}`);
-      }
-
-      // console.log('cliente:',customerUpdate.CustomerPos);
-      // console.log('vendedor: ',sellerUpdate.SellerPos);
+        console.log(`Migrating Customers: ${j + 1} of ${data.length}`);
+      } else {
+        console.log(
+          'CUSTOMER ALREADY',
+          invoiceDataCustomer.IDENTIFICACION_CLIENTE
+        );
+      } 
     } catch (error) {
       console.log(error);
-    } finally {
-      prisma.$disconnect();
     }
   }
+  console.log('-----------------> CUSTOMER POS POS READY <--------------------');
 
   fs.writeFile(
     './src/controllers/Bulks/customerPos/logger/errors.json',
