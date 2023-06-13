@@ -1,4 +1,5 @@
-import { TYPE_DNI } from "../../../../../generated/client"
+import { TYPE_DNI } from "../../../../generated/client"
+
 
 export interface customerExcel {
   id?: string
