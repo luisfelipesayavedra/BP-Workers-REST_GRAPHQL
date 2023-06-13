@@ -166,7 +166,7 @@ export const sellInvoice = async () => {
                                         return {
                                             productUuid: item.uuid,
                                             quantity: parseInt(item.ITEM_CANTIDAD),
-                                            warehouseUuid: warehouse.uuid
+                                            warehouseUuid: warehouse.uuid,
                                         } as SubproductSell
                                     })
                                 }
